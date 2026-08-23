@@ -1,6 +1,6 @@
 #include <iostream>
 
 int main(int argc, char* argv[]) {
-    std::cout << "I am working!" << std::endl;
+    std::cout << "[Mine tracker] I am working!" << std::endl;
     return 0;
 }

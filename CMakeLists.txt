@@ -16,4 +16,5 @@ if(NOT CMAKE_CROSSCOMPILING)
 endif()
 include(GoogleTest)
 
-add_subdirectory(mine_tracker)
+add_subdirectory(mine_tracker
+mine_detector)

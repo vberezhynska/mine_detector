@@ -2,8 +2,9 @@
 
 #include "IController.hpp"
 
-namespace Controllers {
+namespace mine_detector {
     class ESP32 : IController {
-        
+        public:
+            void start();
     };
 }; //namespace Controller

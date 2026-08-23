@@ -1,0 +1,2 @@
+/mine_detector - shoudl be deployed on ESP32 and run there. It reads sensors and send data via ethernet to RPi
+/mine_tracker - listens to notifications from ESP32, analize them, save points to the file and sends them via MavLink
