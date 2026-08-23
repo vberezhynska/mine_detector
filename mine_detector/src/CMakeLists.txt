@@ -6,14 +6,12 @@ idf_component_register(
         "buzzer.cpp"
     INCLUDE_DIRS 
         "../include"
-        "../include/external"
+        "../include/interfaces"
     REQUIRES 
         driver
         esp_eth
+        freertos
 )
 
-# Enforce C++20 standard for ESP-IDF
 target_compile_features(${COMPONENT_LIB} PRIVATE cxx_std_20)
-
-# Optional: Disable extensions if required
-target_compile_options(${COMPONENT_LIB} PRIVATE -fno-ext-numeric-literals)
+target_compile_options(${COMPONENT_LIB} PRIVATE -std=c++20)

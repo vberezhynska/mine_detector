@@ -36,7 +36,27 @@ RUN if id ubuntu >/dev/null 2>&1; then \
 ENV IDF_PATH=/opt/esp/idf
 ENV IDF_TOOLS_PATH=/opt/esp/espressif
 
-RUN git clone --recursive -b v5.3 https://github.com/espressif/esp-idf.git ${IDF_PATH} && \
+# Install required system dependencies for ESP-IDF and OpenOCD
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    wget \
+    flex \
+    bison \
+    gperf \
+    python3 \
+    python3-pip \
+    python3-venv \
+    cmake \
+    ninja-build \
+    ccache \
+    libffi-dev \
+    libssl-dev \
+    dfu-util \
+    libusb-1.0-0 \
+    udev \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN git clone --depth 1 --shallow-submodules --recursive -b v5.3 https://github.com/espressif/esp-idf.git ${IDF_PATH} && \
     ${IDF_PATH}/install.sh esp32c6 && \
     echo "source ${IDF_PATH}/export.sh" >> /home/${CONTAINER_USER}/.bashrc
 

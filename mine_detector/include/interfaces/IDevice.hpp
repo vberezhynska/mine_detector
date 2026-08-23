@@ -8,7 +8,7 @@ namespace mine_detector
         virtual ~IDevice() = default;
 
         // Pure virtual functions (must be overridden by concrete classes)
-        virtual void init() = 0;
+        virtual bool init() = 0;
     };
 } // namespace mine_detector
 

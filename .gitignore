@@ -1,0 +1,11 @@
+# Ignore build directory anywhere in the project tree
+**/build/
+build/
+
+# Ignore auto-generated ESP-IDF configuration files
+sdkconfig
+sdkconfig.old
+sdkconfig.ci
+
+# VS Code and OS files
+.DS_Store

@@ -22,7 +22,8 @@
     "--hostname=devcontainer",
     "--add-host=devcontainer:127.0.1.1",
     "--privileged",
-    "-v", "/dev/bus/usb:/dev/bus/usb"
+    "-v", "/dev/bus/usb:/dev/bus/usb",
+    "--device=/dev/ttyUSB0:/dev/ttyUSB0"
   ],
   "customizations": {
     "vscode": {

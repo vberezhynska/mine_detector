@@ -1,0 +1,4 @@
+[wokwi]
+version = 1
+firmware = 'build/mine_detector.bin'
+elf = 'build/mine_detector.elf'

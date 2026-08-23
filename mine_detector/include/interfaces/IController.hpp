@@ -10,7 +10,8 @@ namespace mine_detector
         virtual ~IController() = default;
 
         // Pure virtual functions (must be overridden by concrete classes)
-        virtual void start() = 0;
+        virtual bool start() = 0;
+        virtual void stop() = 0;
     };
 } // namespace mine_detector
 
