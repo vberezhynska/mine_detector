@@ -3,6 +3,8 @@ idf_component_register(
         "main.cpp"
         "controller.cpp"
         "touch_sensor.cpp"
+        "gps_neo.cpp"
+        "gps_decoder.cpp"
         "buzzer.cpp"
     INCLUDE_DIRS 
         "../include"

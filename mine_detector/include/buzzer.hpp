@@ -12,7 +12,7 @@ enum class BuzzerType {
     PASSIVE  // PWM tone generation via LEDC peripheral
 };
 
-class Buzzer {
+class Buzzer : IDevice {
 public:
     /**
      * @param pin GPIO pin connected to the buzzer
@@ -27,7 +27,7 @@ public:
 
     ~Buzzer();
 
-    bool init();
+    bool init() override;
     void turnOn();
     void turnOff();
     void playTone(uint32_t frequencyHz);

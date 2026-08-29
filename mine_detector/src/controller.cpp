@@ -1,12 +1,13 @@
 #include "controller.hpp"
+#include "gps_decoder.hpp"
 #include "esp_log.h"
 
 static const char* TAG = "Controller";
 
 namespace mine_detector {
 
-    Controller::Controller(TouchSensor& sensor, Buzzer& buzzer, uint32_t pollIntervalMs)
-        : m_sensor(sensor), m_buzzer(buzzer), m_pollIntervalMs(pollIntervalMs) {}
+    Controller::Controller(TouchSensor& sensor, Buzzer& buzzer, GpsNeo& gps, uint32_t pollIntervalMs)
+        : m_sensor(sensor), m_buzzer(buzzer), m_gps(gps), m_pollIntervalMs(pollIntervalMs) {}
 
     Controller::~Controller() {
         stop();
@@ -25,19 +26,28 @@ namespace mine_detector {
         return true;
     }
 
-    void  Controller::runInSimpleLoop(){
-        while (true) {
+    void  Controller::runInSimpleLoop(){  
+            while (true) {
+                //in next versions this one will be moved to separate thead
+                // and when i start using it, parse will be used in m_gps
+            auto gps_data = m_gps.get_data();
+            if (gps_data.has_value()) { // or simply: if (gps_data)
+                ESP_LOGI(TAG, "[GPS FIX] Lat: %.6f, Lon: %.6f, Sats: %u, Alt: %.1f m", 
+                        gps_data->latitude, 
+                        gps_data->longitude, 
+                        static_cast<unsigned int>(gps_data->satellite_count), 
+                        gps_data->altitude);
+            }
+
             bool touched = m_sensor.isTouched();
+            if (touched) {
+                    ESP_LOGW(TAG, "[ALERT] Mine detected!");
+                    m_buzzer.turnOn();
+            } else {
+                    m_buzzer.turnOff();
+            }
 
-        if (touched) {
-                ESP_LOGW(TAG, "[ALERT] Mine detected!");
-                m_buzzer.turnOn();
-        } else {
-                ESP_LOGI(TAG, "[IDLE] Area clear.");
-                m_buzzer.turnOff();
-        }
-
-        vTaskDelay(pdMS_TO_TICKS(m_pollIntervalMs));
+            vTaskDelay(pdMS_TO_TICKS(m_pollIntervalMs));
         }
     }
 
@@ -91,7 +101,6 @@ namespace mine_detector {
                 ESP_LOGW(TAG, "[ALERT] Mine detected!");
                 m_buzzer.turnOn();
             } else {
-                ESP_LOGI(TAG, "[IDLE] Area clear.");
                 m_buzzer.turnOff();
             }
 
