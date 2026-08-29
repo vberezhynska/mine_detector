@@ -12,6 +12,35 @@ namespace mine_detector {
         stop();
     }
 
+    bool Controller::startInLoop()
+    {
+        if (m_isRunning) {
+            ESP_LOGW(TAG, "Controller loop is already running.");
+            return true;
+        }
+
+        runInSimpleLoop();
+        m_isRunning = true;
+        ESP_LOGI(TAG, "Started simple loop");
+        return true;
+    }
+
+    void  Controller::runInSimpleLoop(){
+        while (true) {
+            bool touched = m_sensor.isTouched();
+
+        if (touched) {
+                ESP_LOGW(TAG, "[ALERT] Mine detected!");
+                m_buzzer.turnOn();
+        } else {
+                ESP_LOGI(TAG, "[IDLE] Area clear.");
+                m_buzzer.turnOff();
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(m_pollIntervalMs));
+        }
+    }
+
     bool Controller::start() {
         if (m_isRunning) {
             ESP_LOGW(TAG, "Controller loop is already running.");

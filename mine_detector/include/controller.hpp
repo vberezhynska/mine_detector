@@ -13,13 +13,14 @@ namespace mine_detector {
             Controller(TouchSensor& sensor, Buzzer& buzzer, uint32_t pollIntervalMs = 500);
             ~Controller();
             bool start() override;
+            bool startInLoop();
             void stop() override;
             bool isRunning() const { return m_isRunning; }
 
         private:
             static void taskWrapper(void* arg);
             void runLoop();
-
+            void runInSimpleLoop();
             TouchSensor& m_sensor;
             Buzzer& m_buzzer;
             uint32_t m_pollIntervalMs;

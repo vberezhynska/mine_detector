@@ -30,5 +30,5 @@ extern "C" void app_main(void) {
 
     //Initialize controller
     static mine_detector::Controller controller(sensor, buzzer, 500);
-    controller.start();
+    controller.startInLoop();
 }

@@ -27,31 +27,10 @@ public:
 
     ~Buzzer();
 
-    /**
-     * @brief Initializes GPIO or LEDC PWM peripheral.
-     * @return true on success, false on failure.
-     */
     bool init();
-
-    /**
-     * @brief Turn buzzer on (Active: HIGH level, Passive: default 2000Hz tone).
-     */
     void turnOn();
-
-    /**
-     * @brief Turn buzzer off.
-     */
     void turnOff();
-
-    /**
-     * @brief Play a specific frequency tone (Passive buzzer only).
-     * @param frequencyHz Sound frequency in Hz (e.g. 2000 Hz)
-     */
     void playTone(uint32_t frequencyHz);
-
-    /**
-     * @brief Check if buzzer is currently sounding.
-     */
     bool isSounding() const;
 
     private:
