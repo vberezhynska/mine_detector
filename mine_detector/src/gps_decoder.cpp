@@ -13,6 +13,8 @@ namespace mine_detector {
     bool GgaDecoder::parse(const char* raw_data, GpsSystemFixData& outPos) {
         if (raw_data == nullptr) return false;
 
+        ESP_LOGD(TAG, "RawData received (len: %u): %s", static_cast<unsigned int>(strlen(raw_data)), raw_data);
+
         char* ggaStart = strstr(const_cast<char*>(raw_data), "$GPGGA");
         if (ggaStart == nullptr || ggaStart[0] == '\0') {
             ESP_LOGW(TAG, "No $GPGGA header in current buffer slice");

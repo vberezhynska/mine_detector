@@ -13,8 +13,7 @@ namespace mine_detector {
         public:
             Controller(TouchSensor& sensor, Buzzer& buzzer, GpsNeo& gps, uint32_t pollIntervalMs = 500);
             ~Controller();
-            bool start() override;
-            bool startInLoop();
+            bool start();
             void stop() override;
             bool isRunning() const { return m_isRunning; }
 
@@ -26,8 +25,6 @@ namespace mine_detector {
             TaskHandle_t m_taskHandle{nullptr};
             bool m_isRunning{false};
 
-            static void taskWrapper(void* arg);
-            void runLoop();
             void runInSimpleLoop();
     };
 }; //namespace Controller
