@@ -31,7 +31,7 @@ namespace mine_detector {
                 //in next versions this one will be moved to separate thead
                 // and when i start using it, parse will be used in m_gps
             auto gps_data = m_gps.get_data();
-            if (gps_data.has_value()) { // or simply: if (gps_data)
+            if (gps_data) { 
                 ESP_LOGI(TAG, "[GPS FIX] Lat: %.6f, Lon: %.6f, Sats: %u, Alt: %.1f m", 
                         gps_data->latitude, 
                         gps_data->longitude, 
@@ -108,5 +108,4 @@ namespace mine_detector {
             vTaskDelayUntil(&lastWakeTime, pdMS_TO_TICKS(m_pollIntervalMs));
         }
     }
-
 } // namespace mine_detector

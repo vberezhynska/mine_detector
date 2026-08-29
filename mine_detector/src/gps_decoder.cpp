@@ -15,7 +15,7 @@ namespace mine_detector {
 
         char* ggaStart = strstr(const_cast<char*>(raw_data), "$GPGGA");
         if (ggaStart == nullptr || ggaStart[0] == '\0') {
-            ESP_LOGW(TAG, "No $GPGGA header found");
+            ESP_LOGW(TAG, "No $GPGGA header in current buffer slice");
             return false;
         }
 

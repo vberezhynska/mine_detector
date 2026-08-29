@@ -75,11 +75,10 @@ namespace mine_detector {
         auto raw_data = reinterpret_cast<char*>(m_gpsBuffer);
         GpsSystemFixData data{};
         auto isParsed = GgaDecoder().parse(raw_data, data);
-        if(isParsed){
+        if(isParsed && data.fixValid){
             return data;
         }
 
-        ESP_LOGE(TAG, "Data were not parsed");
         return std::nullopt;
     }
 } //namespace mine_detector
