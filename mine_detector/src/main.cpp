@@ -38,6 +38,6 @@ extern "C" void app_main(void) {
     ESP_LOGI(TAG, "Mine Detector system ready.");
 
     //Initialize controller
-    static mine_detector::Controller controller(sensor, buzzer, gps, 2000);
+    static mine_detector::Controller controller(sensor, buzzer, gps, 1000);
     controller.start();
 }

@@ -9,3 +9,6 @@ sdkconfig.ci
 
 # VS Code and OS files
 .DS_Store
+
+#logs
+**/logs.*

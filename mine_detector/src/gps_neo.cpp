@@ -75,7 +75,7 @@ namespace mine_detector {
         auto raw_data = reinterpret_cast<char*>(m_gpsBuffer);
         GpsSystemFixData data{};
         auto isParsed = GgaDecoder().parse(raw_data, data);
-        if(isParsed && data.fixValid){
+        if(isParsed && data.fix_valid){
             return data;
         }
 

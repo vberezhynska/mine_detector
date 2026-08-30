@@ -1,6 +1,8 @@
 #include "gps_decoder.hpp"
+
 #include "esp_log.h"
 
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -9,11 +11,48 @@
 static const char* TAG = "GPS_DECODER";
 
 namespace mine_detector {
+    const uint32_t SCALE_FACTOR = 1000000;
+
+    int32_t GgaDecoder::to_int32_point(double val) {
+        return static_cast<int32_t>(val * SCALE_FACTOR);
+    }
+    
+    double GgaDecoder::to_double_point(const int32_t value){
+        return static_cast<double>(value) / SCALE_FACTOR;
+    }
+
+    bool GgaDecoder::validate_data_quiality(char* tokens[15], int tokenCount, GpsSystemFixData& outPos){
+        if (tokenCount < 10) 
+            return false;
+
+        // Field 6: Fix Status (0 = Invalid, 1 = GPS Fix, 2 = DGPS)
+        int fixQuality = atoi(tokens[6]);
+        outPos.fix_valid = (fixQuality > 0);
+
+        if (!outPos.fix_valid) {
+            return false;
+        }
+
+        // Field 8:: Drop poor quality readings (> 2.0 means high noise/drift)
+        if (strlen(tokens[8]) > 0) {
+            outPos.hdop = static_cast<float>(std::strtof(tokens[8], nullptr));
+        } else {
+            outPos.hdop = 99.9f;
+        }
+
+        if (outPos.hdop > 2.0f) {
+            ESP_LOGD(TAG, "Dropped reading due to high HDOP: %.2f", outPos.hdop);
+            outPos.fix_valid = false;
+            return false; 
+        }
+
+        return true;
+    }
 
     bool GgaDecoder::parse(const char* raw_data, GpsSystemFixData& outPos) {
         if (raw_data == nullptr) return false;
 
-        ESP_LOGD(TAG, "RawData received (len: %u): %s", static_cast<unsigned int>(strlen(raw_data)), raw_data);
+        ESP_LOGI(TAG, "RawData received (len: %u): %s", static_cast<unsigned int>(strlen(raw_data)), raw_data);
 
         char* ggaStart = strstr(const_cast<char*>(raw_data), "$GPGGA");
         if (ggaStart == nullptr || ggaStart[0] == '\0') {
@@ -41,15 +80,9 @@ namespace mine_detector {
             }
         }
 
-        if (tokenCount < 10) return false;
-
-        // Field 6: Fix Status (0 = Invalid, 1 = GPS Fix, 2 = DGPS)
-        int fixQuality = atoi(tokens[6]);
-        outPos.fixValid = (fixQuality > 0);
-
-        if (!outPos.fixValid) {
-            return false; // No lock yet
-        }
+        outPos.gp_type = GPType::GPGGA;
+        if (!validate_data_quiality(tokens, tokenCount, outPos))
+            return false;
 
         // Field 2 & 3: Latitude (DDMM.MMMM) and Direction (N/S) -> double
         if (strlen(tokens[2]) > 0 && strlen(tokens[3]) > 0) {
