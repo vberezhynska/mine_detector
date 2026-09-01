@@ -1,19 +1,26 @@
 #pragma once
 
-#include "driver/gpio.h"
 #include "IDevice.hpp"
+#include <memory>
 
-//should be on GPIO 4, reads digital pin state HIGH/LOW
 namespace mine_detector {
-    class TouchSensor : IDevice {
-        public:
-            explicit TouchSensor(gpio_num_t pin = GPIO_NUM_4);
-            ~TouchSensor() override = default;
-            bool init() override;
-            bool isTouched() const; // Returns true if touched (GPIO HIGH/active)
 
-        private:
-            gpio_num_t m_pin;
-            bool m_initialized{false};
-    };
-}; //namespace Controller
+class TouchSensor : public IDevice {
+public:
+    explicit TouchSensor(int pin = 4);
+    ~TouchSensor() override;
+
+    TouchSensor(const TouchSensor&) = delete;
+    TouchSensor& operator=(const TouchSensor&) = delete;
+    TouchSensor(TouchSensor&&) noexcept;
+    TouchSensor& operator=(TouchSensor&&) noexcept;
+
+    bool init() override;
+    bool isTouched() const; // Returns true if touched (GPIO HIGH/active)
+
+private:
+    struct Impl;
+    std::unique_ptr<Impl> pImpl;
+};
+
+} // namespace mine_detector

@@ -1,4 +1,8 @@
 #include "controller.hpp"
+
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+
 #include "gps_decoder.hpp"
 #include "esp_log.h"
 
@@ -53,10 +57,6 @@ namespace mine_detector {
     }
 
     void Controller::stop() {
-        if (m_taskHandle != nullptr) {
-            vTaskDelete(m_taskHandle);
-            m_taskHandle = nullptr;
-        }
         m_buzzer.turnOff();
         m_isRunning = false;
         ESP_LOGI(TAG, "Controller task stopped.");

@@ -1,3 +1,4 @@
+#include "freertos/FreeRTOS.h"
 #include "controller.hpp"
 #include "touch_sensor.hpp"
 #include "gps_neo.hpp"
@@ -8,17 +9,17 @@
 static const char* TAG = "main";
 
 // Pin Configuration
-constexpr gpio_num_t TOUCH_SENSOR_PIN = GPIO_NUM_4;
-constexpr gpio_num_t BUZZER_PIN       = GPIO_NUM_5;
-constexpr gpio_num_t GPS_RX_PIN       = GPIO_NUM_21;
-constexpr gpio_num_t GPS_TX_PIN       = GPIO_NUM_22;
+constexpr int TOUCH_SENSOR_PIN = 4;
+constexpr int BUZZER_PIN       = 5;
+constexpr int GPS_RX_PIN       = 21;
+constexpr int GPS_TX_PIN       = 22;
 
 extern "C" void app_main(void) {
     ESP_LOGI(TAG, "Initializing Mine Detector application...");
 
     static mine_detector::TouchSensor sensor(TOUCH_SENSOR_PIN);
     static mine_detector::GpsNeo gps(GPS_RX_PIN, GPS_TX_PIN);
-    static mine_detector::Buzzer buzzer(BUZZER_PIN, mine_detector::BuzzerType::ACTIVE);
+    static mine_detector::Buzzer buzzer( mine_detector::BuzzerType::ACTIVE, BUZZER_PIN);
     
     if (!sensor.init()) {
         ESP_LOGE(TAG, "Failed to initialize touch sensor!");

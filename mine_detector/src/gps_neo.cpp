@@ -6,15 +6,31 @@
 #include "esp_err.h"
 #include "esp_log.h"
 #include "hal/uart_types.h"
+#include "driver/gpio.h"
+#include "driver/ledc.h"
+#include "soc/gpio_num.h"
 
 static const char* TAG = "GPS_NEO";
 
 namespace mine_detector {
+    struct GpsNeo::Impl {
+        gpio_num_t rx_pin; //recive
+        gpio_num_t tx_pin; //transmit
+        uart_port_t uart_nr;
 
-    GpsNeo::GpsNeo(gpio_num_t rx_pin, gpio_num_t tx_pin, uart_port_t uart_nr) : m_rx_pin(rx_pin), m_tx_pin(tx_pin), m_uart_nr(uart_nr){}
+        explicit Impl(gpio_num_t rx_pin, gpio_num_t tx_pin, uart_port_t uart_nr) 
+            : rx_pin(rx_pin), tx_pin(tx_pin), uart_nr(uart_nr) {}
+    };
+
+    GpsNeo::GpsNeo(int rx_pin, int tx_pin, int uart_nr)
+        : pImpl(std::make_unique<Impl>(
+            static_cast<gpio_num_t>(rx_pin),
+            static_cast<gpio_num_t>(tx_pin),
+            static_cast<uart_port_t>(uart_nr))) {}
+
     GpsNeo::~GpsNeo() {
         if (m_initialized){
-            uart_driver_delete(m_uart_nr);
+            uart_driver_delete(pImpl->uart_nr);
         }
     }
     
@@ -30,29 +46,29 @@ namespace mine_detector {
         };
 
         //set config parameters
-        esp_err_t error = uart_param_config(m_uart_nr, &uart_config);
+        esp_err_t error = uart_param_config(pImpl->uart_nr, &uart_config);
         if (error != ESP_OK){
             ESP_LOGE(TAG, "Failed to configure UART parameters");
             return false;
         }
 
         //set UART pins
-        error = uart_set_pin(m_uart_nr, m_tx_pin, m_rx_pin, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
+        error = uart_set_pin(pImpl->uart_nr, pImpl->tx_pin, pImpl->rx_pin, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
         if (error != ESP_OK){
             ESP_LOGE(TAG, "Failed to set UART pins");
             return false;
         }
 
         //set UART RX buffer. No TX, no event queue
-        error = uart_driver_install(m_uart_nr, 1024, 0, 0, NULL, 0);
+        error = uart_driver_install(pImpl->uart_nr, 1024, 0, 0, NULL, 0);
         if (error != ESP_OK){
             ESP_LOGE(TAG, "Failed to install UART driver");
             return false;
         }
 
-        uart_flush_input(m_uart_nr); //start with slean buffer
+        uart_flush_input(pImpl->uart_nr); //start with slean buffer
         m_initialized = true;
-        ESP_LOGI(TAG, "GPS NEO-6M UART initialized successfully (RX: GPIO%d, TX: GPIO%d)", m_rx_pin, m_tx_pin);
+        ESP_LOGI(TAG, "GPS NEO-6M UART initialized successfully (RX: GPIO%d, TX: GPIO%d)", pImpl->rx_pin, pImpl->tx_pin);
         return true;
     }
     
@@ -64,7 +80,7 @@ namespace mine_detector {
             return std::nullopt;
         }
 
-        auto bytes_read = uart_read_bytes(m_uart_nr, m_gpsBuffer, GPS_BUFFER_SIZE - 1, pdMS_TO_TICKS(1000));
+        auto bytes_read = uart_read_bytes(pImpl->uart_nr, m_gpsBuffer, GPS_BUFFER_SIZE - 1, pdMS_TO_TICKS(1000));
         if (bytes_read < 0)
         {
             ESP_LOGE(TAG, "No data recieved.");

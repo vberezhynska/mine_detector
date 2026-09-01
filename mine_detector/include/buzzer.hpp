@@ -1,8 +1,9 @@
 #pragma once
 
-#include "driver/gpio.h"
-#include "driver/ledc.h"
+#include <memory>
+
 #include "IDevice.hpp"
+
 
 //Buzzer (GPIO 5): Uses ESP-IDF's driver/gpio.h (active buzzer)
 namespace mine_detector {
@@ -20,12 +21,16 @@ public:
      * @param channel LEDC channel used for passive mode PWM (default: LEDC_CHANNEL_0)
      * @param timer LEDC timer used for passive mode PWM (default: LEDC_TIMER_0)
      */
-    explicit Buzzer(gpio_num_t pin, 
-                    BuzzerType type = BuzzerType::ACTIVE,
-                    ledc_channel_t channel = LEDC_CHANNEL_0,
-                    ledc_timer_t timer = LEDC_TIMER_0);
+    explicit Buzzer(BuzzerType type = BuzzerType::ACTIVE,
+                    int pin = 5,
+                    int channel = 0,
+                    int timer = 0);
+    ~Buzzer() override;
 
-    ~Buzzer();
+    Buzzer(const Buzzer&) = delete;
+    Buzzer& operator=(const Buzzer&) = delete;
+    Buzzer(Buzzer&&) noexcept;
+    Buzzer& operator=(Buzzer&&) noexcept;
 
     bool init() override;
     void turnOn();
@@ -34,10 +39,8 @@ public:
     bool isSounding() const;
 
     private:
-        gpio_num_t m_pin;
-        BuzzerType m_type;
-        ledc_channel_t m_channel;
-        ledc_timer_t m_timer;
+        struct Impl;
+        std::unique_ptr<Impl> pImpl;
         bool m_isSounding{false};
     };
 
