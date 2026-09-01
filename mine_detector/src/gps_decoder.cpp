@@ -21,12 +21,28 @@ namespace mine_detector {
         return static_cast<double>(value) / SCALE_FACTOR;
     }
 
-    bool GgaDecoder::validate_data_quiality(char* tokens[15], int tokenCount, GpsSystemFixData& outPos){
-        if (tokenCount < 10) 
-            return false;
+    bool GgaDecoder::validate_nmea_checksum(const char* line) {
+        if (line == nullptr || line[0] != '$') return false;
 
+        // Find the '*' delimiter
+        const char* star = strchr(line, '*');
+        if (!star || strlen(star) < 3) return false;
+
+        // Calculate XOR checksum of characters between '$' and '*'
+        uint8_t calculated_checksum = 0;
+        for (const char* p = line + 1; p < star; ++p) {
+            calculated_checksum ^= static_cast<uint8_t>(*p);
+        }
+
+        // Convert hex string after '*' to integer
+        uint8_t expected_checksum = static_cast<uint8_t>(strtol(star + 1, nullptr, 16));
+
+        return (calculated_checksum == expected_checksum);
+    }
+
+    bool GgaDecoder::validate_gga_data_quiality(char* tokens[15], GpsSystemFixData& outPos){
         // Field 6: Fix Status (0 = Invalid, 1 = GPS Fix, 2 = DGPS)
-        int fixQuality = atoi(tokens[6]);
+        int fixQuality = atoi(tokens[6]); //ASCII to Integer
         outPos.fix_valid = (fixQuality > 0);
 
         if (!outPos.fix_valid) {
@@ -41,35 +57,47 @@ namespace mine_detector {
         }
 
         if (outPos.hdop > 2.0f) {
-            ESP_LOGD(TAG, "Dropped reading due to high HDOP: %.2f", outPos.hdop);
+            ESP_LOGW(TAG, "Dropped reading due to high HDOP: %.2f", outPos.hdop);
             outPos.fix_valid = false;
             return false; 
         }
 
+        // Field 7: Satellites -> uint8_t
+        outPos.satellite_count = static_cast<uint8_t>(atoi(tokens[7]));
+        if (outPos.satellite_count > 35)
+        {
+            ESP_LOGW("GPS", "Corrupted satellite count detected: %d. Dropping packet.", outPos.satellite_count);
+            outPos.fix_valid = false;
+            return false;
+        } 
+
         return true;
     }
 
-    bool GgaDecoder::parse(const char* raw_data, GpsSystemFixData& outPos) {
-        if (raw_data == nullptr) return false;
-
-        ESP_LOGI(TAG, "RawData received (len: %u): %s", static_cast<unsigned int>(strlen(raw_data)), raw_data);
-
-        char* ggaStart = strstr(const_cast<char*>(raw_data), "$GPGGA");
-        if (ggaStart == nullptr || ggaStart[0] == '\0') {
-            ESP_LOGW(TAG, "No $GPGGA header in current buffer slice");
-            return false;
+    // Latitude (DDMM.MMMM) and Direction (N/S) -> double
+    // Longitude (DDDMM.MMMM) and Direction (E/W) -> double
+    double GgaDecoder::parse_coordinate(const char* val_str, const char* dir_str) {
+        if (!val_str || !dir_str || strlen(val_str) == 0 || strlen(dir_str) == 0) {
+            return 0.0;
         }
 
-        // Copy starting from the $GPGGA pointer
-        char buffer[128];
-        strncpy(buffer, ggaStart, sizeof(buffer) - 1);
-        buffer[sizeof(buffer) - 1] = '\0';
+        double raw = std::strtod(val_str, nullptr);
+        int degrees = static_cast<int>(raw / 100.0);
+        double minutes = raw - (degrees * 100.0);
+        double decimal_degrees = degrees + (minutes / 60.0);
 
-        char* tokens[15];
-        int tokenCount = 0;
+        if (dir_str[0] == 'S' || dir_str[0] == 'W' || dir_str[0] == 's' || dir_str[0] == 'w') {
+            decimal_degrees = -decimal_degrees;
+        }
+
+        return decimal_degrees;
+    }
+
+    uint8_t GgaDecoder::tokenize(const uint8_t token_length, char* tokens[], char* buffer) {
+        uint8_t tokenCount = 0; 
         char* ptr = buffer;
 
-        while (ptr && tokenCount < 15) {
+        while (ptr && tokenCount < token_length) {
             tokens[tokenCount++] = ptr;
             char* comma = strchr(ptr, ',');
             if (comma) {
@@ -79,31 +107,39 @@ namespace mine_detector {
                 ptr = nullptr;
             }
         }
+        
+        return tokenCount;
+    }
+
+    bool GgaDecoder::parse_gga(const char* ggaStart, GpsSystemFixData& outPos){
+        const uint8_t token_length = 15;
+        const uint8_t n_critical_fields = 10;
+        
+        if (!validate_nmea_checksum(ggaStart)){
+            ESP_LOGW(TAG, "$GPGGA checksum is wrong.");
+            return false;
+        }
+        
+        char* tokens[token_length]; 
+        char buffer[128];
+        strncpy(buffer, ggaStart, sizeof(buffer) - 1);
+        buffer[sizeof(buffer) - 1] = '\0'; 
+        auto t_count = tokenize(token_length, tokens, buffer);
+
+        if (t_count < n_critical_fields)
+            return false; //Critical fields: Lat (2/3), Lon (4/5), Fix (6), Sats (7), HDOP (8), Alt (9)
 
         outPos.gp_type = GPType::GPGGA;
-        if (!validate_data_quiality(tokens, tokenCount, outPos))
+        if (!validate_gga_data_quiality(tokens, outPos))
             return false;
 
-        // Field 2 & 3: Latitude (DDMM.MMMM) and Direction (N/S) -> double
         if (strlen(tokens[2]) > 0 && strlen(tokens[3]) > 0) {
-            double rawLat = std::strtod(tokens[2], nullptr);
-            int degrees = static_cast<int>(rawLat / 100.0);
-            double minutes = rawLat - (degrees * 100.0);
-            outPos.latitude = degrees + (minutes / 60.0);
-            if (tokens[3][0] == 'S') outPos.latitude = -outPos.latitude;
+            outPos.latitude = parse_coordinate(tokens[2], tokens[3]);
         }
-
-        // Field 4 & 5: Longitude (DDDMM.MMMM) and Direction (E/W) -> double
+        
         if (strlen(tokens[4]) > 0 && strlen(tokens[5]) > 0) {
-            double rawLon = std::strtod(tokens[4], nullptr);
-            int degrees = static_cast<int>(rawLon / 100.0);
-            double minutes = rawLon - (degrees * 100.0);
-            outPos.longitude = degrees + (minutes / 60.0);
-            if (tokens[5][0] == 'W') outPos.longitude = -outPos.longitude;
+            outPos.longitude = parse_coordinate(tokens[4], tokens[5]);
         }
-
-        // Field 7: Satellites -> uint8_t
-        outPos.satellite_count = static_cast<uint8_t>(atoi(tokens[7]));
 
         // Field 9: Altitude -> double
         if (strlen(tokens[9]) > 0) {
@@ -111,6 +147,109 @@ namespace mine_detector {
         }
 
         return true;
+    }
+
+    bool GgaDecoder::parse_rmc(const char* rmcStart, GpsSystemFixData& outPos){
+        const uint8_t token_length = 13;
+        const uint8_t n_critical_fields = 7;
+        
+        if (!validate_nmea_checksum(rmcStart)){
+            ESP_LOGW(TAG, "$GPRMC checksum is wrong.");
+            return false;
+        }
+        
+        outPos.gp_type = GPType::GPRMC;
+        char buffer[128];
+        strncpy(buffer, rmcStart, sizeof(buffer) - 1);
+        buffer[sizeof(buffer) - 1] = '\0';
+
+        char* tokens[token_length];
+        auto t_count = tokenize(token_length, tokens, buffer);
+        if (t_count < n_critical_fields) // (2) = Status, (3/4) Lat, (5/6) - Long
+            return false;
+
+        // Field 2: Status ('A' = Active/Valid, 'V' = Void/Invalid)
+        if (tokens[2][0] != 'A') {
+            outPos.fix_valid = false;
+            return false;
+        }
+
+        // Parse Coordinates
+        if (strlen(tokens[3]) > 0 && strlen(tokens[4]) > 0) {
+            outPos.latitude = parse_coordinate(tokens[3], tokens[4]);
+        }
+
+        if (strlen(tokens[5]) > 0 && strlen(tokens[6]) > 0) {
+            outPos.longitude = parse_coordinate(tokens[5], tokens[6]);
+        }
+
+        outPos.fix_valid  = true;
+        return true;               
+    }
+
+    bool GgaDecoder::parse_gll(const char* gllStart, GpsSystemFixData& outPos){
+        const uint8_t token_length = 7;
+        const uint8_t n_critical_fields = 5;
+        
+        if (!validate_nmea_checksum(gllStart)){
+            ESP_LOGW(TAG, "$GPRMC checksum is wrong.");
+            return false;
+        }
+        
+        outPos.gp_type = GPType::GPGLL;
+        char buffer[128];
+        strncpy(buffer, gllStart, sizeof(buffer) - 1);
+        buffer[sizeof(buffer) - 1] = '\0';
+
+        char* tokens[token_length];
+        auto t_count = tokenize(token_length, tokens, buffer);
+        if (t_count < n_critical_fields) // (1/2) - Lat, (3/4) - Long
+            return false;
+
+        // Parse Coordinates
+        if (strlen(tokens[1]) > 0 && strlen(tokens[2]) > 0) {
+            outPos.latitude = parse_coordinate(tokens[1], tokens[2]);
+        }
+
+        if (strlen(tokens[3]) > 0 && strlen(tokens[4]) > 0) {
+            outPos.longitude = parse_coordinate(tokens[3], tokens[4]);
+        }
+
+        outPos.fix_valid  = true;
+        return true;
+    }
+
+    bool GgaDecoder::parse(const char* raw_data, GpsSystemFixData& outPos) {
+        if (raw_data == nullptr) return false;
+
+        ESP_LOGI(TAG, "RawData received (len: %u): %s", static_cast<unsigned int>(strlen(raw_data)), raw_data);
+
+        //GPGGA prio 1
+        char* ggaStart = strstr(const_cast<char*>(raw_data), "$GPGGA");
+        if (ggaStart != nullptr && ggaStart[0] == '\0' && parse_gga(ggaStart, outPos)) {
+            return true; //Parsed with GPGGA
+        } else {
+            ESP_LOGI(TAG, "No $GPGGA header in current buffer slice. Falling back to other types.");
+        }
+
+        //GPRMC prio 2
+        char* rmsStart = strstr(const_cast<char*>(raw_data), "$GPRMC");
+        if (rmsStart != nullptr && rmsStart[0] == '\0' && parse_rmc(rmsStart, outPos)) {
+            return true; //Parsed with GPRMC
+        } else {
+            ESP_LOGI(TAG, "No $GPRMC header in current buffer slice. Falling back to other types.");
+        }
+
+        //GPRMC prio 3
+        char* gllStart = strstr(const_cast<char*>(raw_data), "$GPGLL");
+        if (gllStart != nullptr && gllStart[0] == '\0' && parse_gll(gllStart, outPos)) {
+            return true; //Parsed with GPGLL
+        } else {
+            ESP_LOGI(TAG, "No $GPGLL header in current buffer slice. Failing parsing.");
+        }
+
+        ESP_LOGW(TAG, "None of $GPGGA $GPRMC $GPGLL headers found.");
+        return false;
     }
 
 } // namespace mine_detector

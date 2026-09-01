@@ -3,7 +3,7 @@
 #include <cstdint>
 
 namespace mine_detector {
-    enum class GPType : uint8_t {
+    enum class GPType : uint8_t { //todo: rename to NMEA_Type
         GPGGA = 0, //best one
         GPRMC = 1,
         GPGLL = 2,
@@ -27,6 +27,12 @@ namespace mine_detector {
             static int32_t to_int32_point(const double val);
 
         private:
-            static bool validate_data_quiality(char* tokens[15], int tokenCount, GpsSystemFixData& outPos);
+            static bool validate_nmea_checksum(const char* line);
+            static uint8_t tokenize(const uint8_t token_length, char* tokens[], char* buffer);  
+            static bool validate_gga_data_quiality(char* tokens[15], GpsSystemFixData& outPos);
+            static double parse_coordinate(const char* val_str, const char* dir_str);
+            static bool parse_gga(const char* ggaStart, GpsSystemFixData& outPos);
+            static bool parse_rmc(const char* rmcStart, GpsSystemFixData& outPos);
+            static bool parse_gll(const char* gllStart, GpsSystemFixData& outPos);
     };
 } //namespace mine_detector
