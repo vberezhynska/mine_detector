@@ -1,6 +1,7 @@
 # Ignore build directory anywhere in the project tree
 **/build/
 build/
+**/.cache/
 
 # Ignore auto-generated ESP-IDF configuration files
 sdkconfig
@@ -12,4 +13,6 @@ sdkconfig.ci
 
 #logs
 **/logs.*
-**/.cache/
+
+#test
+**/test/

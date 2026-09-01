@@ -43,3 +43,11 @@ Ctrl + ]
 
 /// Soft Reboot ESP32 ///
 Ctrl + R
+
+
+*** TEST ***
+mkdir -p test/build && cd test/build
+cd /test/build
+cmake ..
+make -j$(nproc)
+./run_gps_tests

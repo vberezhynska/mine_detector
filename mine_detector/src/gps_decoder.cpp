@@ -1,12 +1,20 @@
 #include "gps_decoder.hpp"
 
-#include "esp_log.h"
-
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <cmath>
+
+#ifdef HOST_TESTING
+  #include <cstdio>
+  #define ESP_LOGI(tag, fmt, ...) printf("[INFO] [%s] " fmt "\n", tag, ##__VA_ARGS__)
+  #define ESP_LOGW(tag, fmt, ...) printf("[WARN] [%s] " fmt "\n", tag, ##__VA_ARGS__)
+  #define ESP_LOGE(tag, fmt, ...) printf("[ERR]  [%s] " fmt "\n", tag, ##__VA_ARGS__)
+  #define ESP_LOGD(tag, fmt, ...) printf("[DEBUG]  [%s] " fmt "\n", tag, ##__VA_ARGS__)
+#else
+  #include "esp_log.h"
+#endif
 
 static const char* TAG = "GPS_DECODER";
 
