@@ -25,7 +25,7 @@ namespace mine_detector {
         if (line == nullptr || line[0] != '$') return false;
 
         // Find the '*' delimiter
-        const char* star = strchr(line, '*');
+        const char* star = strchr(line, '*'); // Needs at least *XX
         if (!star || strlen(star) < 3) return false;
 
         // Calculate XOR checksum of characters between '$' and '*'
@@ -35,7 +35,8 @@ namespace mine_detector {
         }
 
         // Convert hex string after '*' to integer
-        uint8_t expected_checksum = static_cast<uint8_t>(strtol(star + 1, nullptr, 16));
+        char hex_str[3] = { star[1], star[2], '\0' };
+        uint8_t expected_checksum = static_cast<uint8_t>(strtol(hex_str, nullptr, 16));
 
         return (calculated_checksum == expected_checksum);
     }
@@ -224,28 +225,21 @@ namespace mine_detector {
 
         ESP_LOGI(TAG, "RawData received (len: %u): %s", static_cast<unsigned int>(strlen(raw_data)), raw_data);
 
-        //GPGGA prio 1
         char* ggaStart = strstr(const_cast<char*>(raw_data), "$GPGGA");
-        if (ggaStart != nullptr && ggaStart[0] == '\0' && parse_gga(ggaStart, outPos)) {
+        if (ggaStart != nullptr && parse_gga(ggaStart, outPos)) {
             return true; //Parsed with GPGGA
-        } else {
-            ESP_LOGI(TAG, "No $GPGGA header in current buffer slice. Falling back to other types.");
         }
+        ESP_LOGI(TAG, "No $GPGGA header in current buffer slice. Falling back to other types.");
 
-        //GPRMC prio 2
         char* rmsStart = strstr(const_cast<char*>(raw_data), "$GPRMC");
-        if (rmsStart != nullptr && rmsStart[0] == '\0' && parse_rmc(rmsStart, outPos)) {
+        if (rmsStart != nullptr && parse_rmc(rmsStart, outPos)) {
             return true; //Parsed with GPRMC
-        } else {
-            ESP_LOGI(TAG, "No $GPRMC header in current buffer slice. Falling back to other types.");
         }
+        ESP_LOGI(TAG, "No $GPRMC header in current buffer slice. Falling back to other types.");
 
-        //GPRMC prio 3
         char* gllStart = strstr(const_cast<char*>(raw_data), "$GPGLL");
-        if (gllStart != nullptr && gllStart[0] == '\0' && parse_gll(gllStart, outPos)) {
+        if (gllStart != nullptr && parse_gll(gllStart, outPos)) {
             return true; //Parsed with GPGLL
-        } else {
-            ESP_LOGI(TAG, "No $GPGLL header in current buffer slice. Failing parsing.");
         }
 
         ESP_LOGW(TAG, "None of $GPGGA $GPRMC $GPGLL headers found.");
