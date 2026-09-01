@@ -12,3 +12,4 @@ sdkconfig.ci
 
 #logs
 **/logs.*
+**/.cache/

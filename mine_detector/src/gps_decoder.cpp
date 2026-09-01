@@ -64,13 +64,15 @@ namespace mine_detector {
         }
 
         // Field 7: Satellites -> uint8_t
-        outPos.satellite_count = static_cast<uint8_t>(atoi(tokens[7]));
-        if (outPos.satellite_count > 35)
+        auto satellite_count = static_cast<uint8_t>(atoi(tokens[7]));
+        if (satellite_count > 35)
         {
-            ESP_LOGW("GPS", "Corrupted satellite count detected: %d. Dropping packet.", outPos.satellite_count);
+            ESP_LOGW("GPS", "Corrupted satellite count detected: %d. Dropping packet.", satellite_count);
             outPos.fix_valid = false;
             return false;
-        } 
+        }
+
+        outPos.satellite_count = satellite_count;
 
         return true;
     }
@@ -130,10 +132,10 @@ namespace mine_detector {
         if (t_count < n_critical_fields)
             return false; //Critical fields: Lat (2/3), Lon (4/5), Fix (6), Sats (7), HDOP (8), Alt (9)
 
-        outPos.gp_type = GPType::GPGGA;
         if (!validate_gga_data_quiality(tokens, outPos))
             return false;
 
+        outPos.gp_type = NMEA_Type::GPGGA;
         if (strlen(tokens[2]) > 0 && strlen(tokens[3]) > 0) {
             outPos.latitude = parse_coordinate(tokens[2], tokens[3]);
         }
@@ -159,7 +161,6 @@ namespace mine_detector {
             return false;
         }
         
-        outPos.gp_type = GPType::GPRMC;
         char buffer[128];
         strncpy(buffer, rmcStart, sizeof(buffer) - 1);
         buffer[sizeof(buffer) - 1] = '\0';
@@ -175,6 +176,7 @@ namespace mine_detector {
             return false;
         }
 
+        outPos.gp_type = NMEA_Type::GPRMC;
         // Parse Coordinates
         if (strlen(tokens[3]) > 0 && strlen(tokens[4]) > 0) {
             outPos.latitude = parse_coordinate(tokens[3], tokens[4]);
@@ -190,23 +192,29 @@ namespace mine_detector {
 
     bool GgaDecoder::parse_gll(const char* gllStart, GpsSystemFixData& outPos){
         const uint8_t token_length = 7;
-        const uint8_t n_critical_fields = 5;
+        const uint8_t n_critical_fields = 6;
         
         if (!validate_nmea_checksum(gllStart)){
-            ESP_LOGW(TAG, "$GPRMC checksum is wrong.");
+            ESP_LOGW(TAG, "$GPGLL checksum is wrong.");
             return false;
         }
         
-        outPos.gp_type = GPType::GPGLL;
         char buffer[128];
         strncpy(buffer, gllStart, sizeof(buffer) - 1);
         buffer[sizeof(buffer) - 1] = '\0';
 
         char* tokens[token_length];
         auto t_count = tokenize(token_length, tokens, buffer);
-        if (t_count < n_critical_fields) // (1/2) - Lat, (3/4) - Long
+        if (t_count < n_critical_fields)
             return false;
 
+        // 'V' (Void/Invalid)
+        if (tokens[6][0] != 'A') {
+            outPos.fix_valid = false;
+            return false;
+        }
+
+        outPos.gp_type = NMEA_Type::GPGLL;
         // Parse Coordinates
         if (strlen(tokens[1]) > 0 && strlen(tokens[2]) > 0) {
             outPos.latitude = parse_coordinate(tokens[1], tokens[2]);
@@ -216,14 +224,14 @@ namespace mine_detector {
             outPos.longitude = parse_coordinate(tokens[3], tokens[4]);
         }
 
-        outPos.fix_valid  = true;
+        outPos.fix_valid = true;
         return true;
     }
 
     bool GgaDecoder::parse(const char* raw_data, GpsSystemFixData& outPos) {
         if (raw_data == nullptr) return false;
 
-        ESP_LOGI(TAG, "RawData received (len: %u): %s", static_cast<unsigned int>(strlen(raw_data)), raw_data);
+        ESP_LOGD(TAG, "RawData received (len: %u): %s", static_cast<unsigned int>(strlen(raw_data)), raw_data);
 
         char* ggaStart = strstr(const_cast<char*>(raw_data), "$GPGGA");
         if (ggaStart != nullptr && parse_gga(ggaStart, outPos)) {

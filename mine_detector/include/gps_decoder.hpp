@@ -3,15 +3,25 @@
 #include <cstdint>
 
 namespace mine_detector {
-    enum class GPType : uint8_t { //todo: rename to NMEA_Type
+    enum class NMEA_Type : uint8_t { //todo: rename to NMEA_Type
         GPGGA = 0, //best one
         GPRMC = 1,
         GPGLL = 2,
         UNKNOWN = 255
     };
 
+    constexpr const char* to_string(NMEA_Type type) {
+        switch (type) {
+            case NMEA_Type::GPGGA:   return "GPGGA";
+            case NMEA_Type::GPRMC:   return "GPRMC";
+            case NMEA_Type::GPGLL:   return "GPGLL";
+            case NMEA_Type::UNKNOWN: 
+            default:                 return "UNKNOWN";
+        }
+    }
+
     struct GpsSystemFixData {
-        GPType gp_type = GPType::UNKNOWN; 
+        NMEA_Type gp_type = NMEA_Type::UNKNOWN; 
         bool fix_valid{false}; //false: module is searching for satellites
         double latitude{0.0};       
         double longitude{0.0};      

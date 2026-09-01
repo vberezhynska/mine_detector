@@ -30,7 +30,7 @@ idf.py build
 cd mine_detector
 
 /// To Flash from WSL ///
-ls /dev/ttyUSB* // should have dev/ttyUSB0
+ls /dev/ttyUSB* // should have dev/ttyUSB0. If not => rebuild DevContainer
 sudo chmod 666 /dev/ttyUSB0
 idf.py -p /dev/ttyUSB0 flash monitor
 

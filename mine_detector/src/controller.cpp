@@ -32,7 +32,8 @@ namespace mine_detector {
                 // and when i start using it, parse will be used in m_gps
             auto gps_data = m_gps.get_data();
             if (gps_data) { 
-                ESP_LOGI(TAG, "[GPS FIX] Lat: %.6f, Lon: %.6f, Sats: %u, Alt: %.1f m", 
+                ESP_LOGI(TAG, "[GPS FIX][%s] Lat: %.6f, Lon: %.6f, Sats: %u, Alt: %.1f m", 
+                        to_string(gps_data->gp_type),
                         gps_data->latitude, 
                         gps_data->longitude, 
                         static_cast<unsigned int>(gps_data->satellite_count), 
