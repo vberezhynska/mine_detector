@@ -22,6 +22,7 @@ target_include_directories(tracker PUBLIC
 # ---- Main executable -----
 add_executable(mine_tracker 
     src/main.cpp
+    src/udp_server.cpp
 )
 
 # Link your tracker library to the executable
