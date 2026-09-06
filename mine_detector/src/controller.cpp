@@ -2,16 +2,25 @@
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "esp_log.h"
 
 #include "gps_decoder.hpp"
-#include "esp_log.h"
+#include "udp_socket.hpp"
 
 static const char* TAG = "Controller";
 
 namespace mine_detector {
 
-    Controller::Controller(TouchSensor& sensor, Buzzer& buzzer, GpsNeo& gps, uint32_t pollIntervalMs)
-        : m_sensor(sensor), m_buzzer(buzzer), m_gps(gps), m_pollIntervalMs(pollIntervalMs) {}
+    Controller::Controller(TouchSensor& sensor, 
+                            Buzzer& buzzer, 
+                            GpsNeo& gps,
+                            const std::unique_ptr<networking::UdpSocket>& udp_socket,
+                            uint32_t pollIntervalMs)
+                : m_sensor(sensor), 
+                m_buzzer(buzzer), 
+                m_gps(gps), 
+                m_udp_socket(*udp_socket),
+                m_pollIntervalMs(pollIntervalMs) {}
 
     Controller::~Controller() {
         stop();
@@ -48,6 +57,7 @@ namespace mine_detector {
             if (touched) {
                     ESP_LOGW(TAG, "[ALERT] Mine detected!");
                     m_buzzer.turnOn();
+                    m_udp_socket.sendTouched();
             } else {
                     m_buzzer.turnOff();
             }

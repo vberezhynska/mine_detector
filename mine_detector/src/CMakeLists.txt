@@ -7,6 +7,8 @@ idf_component_register(
         "gps_decoder.cpp"
         "buzzer.cpp"
         "touch_sensor.cpp"
+        "udp_socket.cpp"
+        "wifi_manager.cpp"
     INCLUDE_DIRS 
         "../include"
         "../include/interfaces"
@@ -14,6 +16,8 @@ idf_component_register(
         driver
         esp_eth
         freertos
+        nvs_flash
+        esp_wifi
 )
 
 target_compile_features(${COMPONENT_LIB} PRIVATE cxx_std_20)

@@ -1,14 +1,22 @@
 #pragma once
 
+#include <memory>
+
 #include "IController.hpp"
 #include "buzzer.hpp"
 #include "touch_sensor.hpp"
 #include "gps_neo.hpp"
 
+namespace networking { class UdpSocket; };
+
 namespace mine_detector {
     class Controller : IController {
         public:
-            Controller(TouchSensor& sensor, Buzzer& buzzer, GpsNeo& gps, uint32_t pollIntervalMs = 500);
+            Controller(TouchSensor& sensor, 
+                Buzzer& buzzer, 
+                GpsNeo& gps, 
+                const std::unique_ptr<networking::UdpSocket>& udp_socket,
+                uint32_t pollIntervalMs = 500);
             ~Controller();
             bool start() override;
             void stop() override;
@@ -18,6 +26,7 @@ namespace mine_detector {
             TouchSensor& m_sensor;
             Buzzer& m_buzzer;
             GpsNeo& m_gps;
+            networking::UdpSocket& m_udp_socket;
             uint32_t m_pollIntervalMs;
             bool m_isRunning{false};
 

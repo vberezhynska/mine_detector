@@ -1,5 +1,6 @@
 #pragma once
 
+#include <string>
 #include <memory>
 #include "interfaces/ISocket.hpp"
 
@@ -15,7 +16,7 @@ namespace networking {
 
     class UdpSocket : ISocket {
     public:
-        explicit UdpSocket(char* targetIp, uint16_t targetPort);
+        explicit UdpSocket(std::string server_ip, uint16_t serverPort) ;
         ~UdpSocket() override;
 
         UdpSocket(const UdpSocket&) = delete;
@@ -23,14 +24,16 @@ namespace networking {
         UdpSocket(UdpSocket&&) noexcept;
         UdpSocket& operator=(UdpSocket&&) noexcept;
 
-        bool initSocket() override;
+        bool init() override;
         void sendCoordinates();
+        void sendTouched();
 
     private:
         struct Impl;
         std::unique_ptr<Impl> pImpl;
-        
         static constexpr const char* TAG = "UdpGpsSender";
+
+        bool send_payload(const std::string& message);     
     };
 } //namespace networking
 
