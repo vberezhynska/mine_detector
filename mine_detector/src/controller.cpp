@@ -11,39 +11,78 @@ static const char* TAG = "Controller";
 
 namespace mine_detector {
 
+    struct Controller::Impl {
+        TaskHandle_t taskHandle{nullptr};
+        TouchSensor& sensor;
+        Buzzer& buzzer;
+        GpsNeo& gps;
+        networking::UdpSocket& udp_socket;
+        uint32_t pollIntervalMs;
+        bool is_running{false};
+
+        Impl(TouchSensor& sensor, 
+                            Buzzer& buzzer, 
+                            GpsNeo& gps,
+                            networking::UdpSocket& udp_socket,
+                            uint32_t pollIntervalMs) 
+                : sensor(sensor), 
+                buzzer(buzzer), 
+                gps(gps), 
+                udp_socket(udp_socket),
+                pollIntervalMs(pollIntervalMs) {}
+    };
+
     Controller::Controller(TouchSensor& sensor, 
                             Buzzer& buzzer, 
                             GpsNeo& gps,
                             const std::unique_ptr<networking::UdpSocket>& udp_socket,
                             uint32_t pollIntervalMs)
-                : m_sensor(sensor), 
-                m_buzzer(buzzer), 
-                m_gps(gps), 
-                m_udp_socket(*udp_socket),
-                m_pollIntervalMs(pollIntervalMs) {}
+                : pImpl(std::make_unique<Impl>(sensor, buzzer, gps, *udp_socket, pollIntervalMs)) { }
 
     Controller::~Controller() {
         stop();
     }
 
+    bool Controller::isRunning() {
+        return pImpl->is_running;
+    }
+
     bool Controller::start()
     {
-        if (m_isRunning) {
+        if (pImpl->is_running) {
             ESP_LOGW(TAG, "Controller loop is already running.");
             return true;
         }
+        
+        BaseType_t result = xTaskCreate(
+            Controller::task_wrapper,
+            "detector_task",
+            3072, // stack size in words
+            this, //passed parameter
+            5, // task priority
+            &pImpl->taskHandle
+        );
 
-        runInSimpleLoop();
-        m_isRunning = true;
-        ESP_LOGI(TAG, "Started simple loop");
-        return true;
+        if (result == pdPASS) {
+            pImpl->is_running = true;
+            ESP_LOGI(TAG, "Controller task started successfully (interval: %ld ms)", pImpl->pollIntervalMs);
+            return true;
+        }
+
+        ESP_LOGE(TAG, "Failed to create Controller task!");
+        return false;
     }
 
-    void  Controller::runInSimpleLoop(){  
-            while (true) {
-                //in next versions this one will be moved to separate thead + will be run with task using FreeRTOS
-                // and when i start using it, parse will be used in m_gps
-            auto gps_data = m_gps.get_data();
+    void Controller::task_wrapper(void *arg){
+        auto* controller = static_cast<Controller*>(arg);
+        controller->runLoop();
+    }
+
+    void  Controller::runLoop(){  
+        TickType_t lastWakeTime = xTaskGetTickCount();    
+        
+        while (true) {
+            auto gps_data = pImpl->gps.get_data();
             if (gps_data) { 
                 ESP_LOGI(TAG, "[GPS FIX][%s] Lat: %.6f, Lon: %.6f, Sats: %u, Alt: %.1f m", 
                         to_string(gps_data->gp_type),
@@ -53,22 +92,29 @@ namespace mine_detector {
                         gps_data->altitude);
             }
 
-            bool touched = m_sensor.isTouched();
+            bool touched = pImpl->sensor.isTouched();
             if (touched) {
                     ESP_LOGW(TAG, "[ALERT] Mine detected!");
-                    m_buzzer.turnOn();
-                    m_udp_socket.sendTouched();
+                    pImpl->buzzer.turnOn();
+                    pImpl->udp_socket.sendTouched();
             } else {
-                    m_buzzer.turnOff();
+                    pImpl->buzzer.turnOff();
             }
 
-            vTaskDelay(pdMS_TO_TICKS(m_pollIntervalMs));
+            vTaskDelayUntil(&lastWakeTime, pdMS_TO_TICKS(pImpl->pollIntervalMs));
         }
+
+        vTaskDelete(NULL);
     }
 
     void Controller::stop() {
-        m_buzzer.turnOff();
-        m_isRunning = false;
+        pImpl->buzzer.turnOff();
+        if (pImpl->taskHandle != nullptr) {
+            TaskHandle_t handle = pImpl->taskHandle;
+            pImpl->taskHandle = nullptr;
+            vTaskDelete(handle);
+        }
+        pImpl->is_running = false;
         ESP_LOGI(TAG, "Controller task stopped.");
     }
 

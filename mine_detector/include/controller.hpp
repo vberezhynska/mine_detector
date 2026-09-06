@@ -12,24 +12,27 @@ namespace networking { class UdpSocket; };
 namespace mine_detector {
     class Controller : IController {
         public:
-            Controller(TouchSensor& sensor, 
+            explicit Controller(TouchSensor& sensor, 
                 Buzzer& buzzer, 
                 GpsNeo& gps, 
                 const std::unique_ptr<networking::UdpSocket>& udp_socket,
                 uint32_t pollIntervalMs = 500);
             ~Controller();
+
+            Controller(const Controller&) = delete;
+            Controller& operator=(const Controller&) = delete;
+            Controller(Buzzer&&) noexcept;
+            Controller& operator=(Controller&&) noexcept;
+
             bool start() override;
             void stop() override;
-            bool isRunning() const { return m_isRunning; }
+            bool isRunning();
 
         private:
-            TouchSensor& m_sensor;
-            Buzzer& m_buzzer;
-            GpsNeo& m_gps;
-            networking::UdpSocket& m_udp_socket;
-            uint32_t m_pollIntervalMs;
-            bool m_isRunning{false};
+            struct Impl;
+            std::unique_ptr<Impl> pImpl;
 
-            void runInSimpleLoop();
+            static void task_wrapper(void* arg);
+            void runLoop();
     };
 }; //namespace Controller
