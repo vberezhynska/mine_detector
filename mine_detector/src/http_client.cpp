@@ -29,9 +29,7 @@ namespace networking {
         }
     };
 
-    HttpClient::HttpClient(std::string baseUrl, uint16_t port) : pImpl(std::make_unique<Impl>(std::move(baseUrl), port)) {
-
-    }
+    HttpClient::HttpClient(std::string baseUrl, uint16_t port) : pImpl(std::make_unique<Impl>(std::move(baseUrl), port)) { }
 
     HttpClient::~HttpClient() = default;
 
@@ -68,7 +66,7 @@ namespace networking {
         esp_http_client_set_url(pImpl->client, fullUrl.c_str());
         esp_http_client_set_method(pImpl->client, HTTP_METHOD_POST);
         esp_http_client_set_header(pImpl->client, "Content-Type", "application/json");
-        esp_http_client_set_header(pImpl->client, "Connection", "close"); //TODO: clarify if I should close connection, if I do not expect another POST upt to 60 sec
+        esp_http_client_set_header(pImpl->client, "Connection", "close"); //close socket connection
         esp_http_client_set_post_field(pImpl->client, payload.c_str(), static_cast<int>(payload.length()));
 
         esp_err_t err = esp_http_client_perform(pImpl->client); //opens and closes socket connection

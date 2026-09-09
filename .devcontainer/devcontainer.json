@@ -17,6 +17,7 @@
   "initializeCommand": [
     ".devcontainer/scripts/initialize"
   ],
+  "forwardPorts": [5005, 8080],
   "runArgs": [
     "--network=host",
     "--hostname=devcontainer",

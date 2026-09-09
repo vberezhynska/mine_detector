@@ -32,7 +32,7 @@ namespace networking {
     bool UdpSocket::init(){
         pImpl->socket_fd = ::socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
         if (pImpl->socket_fd < 0){
-            ESP_LOGE(TAG, "[Client Error] Failed to create UDP socket.");
+            ESP_LOGE(TAG, "Failed to create UDP socket.");
             return false;
         }
 
