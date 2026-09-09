@@ -3,7 +3,7 @@
 #include <cstdint>
 
 namespace mine_detector {
-    enum class NMEA_Type : uint8_t { //todo: rename to NMEA_Type
+    enum class NMEA_Type : uint8_t {
         GPGGA = 0, //best one
         GPRMC = 1,
         GPGLL = 2,

@@ -25,9 +25,11 @@ usbipd list
 // shoudl be  : 1-1    10c4:ea60  CP2102N USB to UART Bridge Controller                         Attached
 
 --- In WSL ---
-cd mine_detector //main project file
+from mine_detector
 idf.py build
 cd mine_detector
+
+>> if build issue: idf.py build -- -j1
 
 /// To Flash from WSL ///
 ls /dev/ttyUSB* // should have dev/ttyUSB0. If not => rebuild DevContainer

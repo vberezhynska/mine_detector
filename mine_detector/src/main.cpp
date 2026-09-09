@@ -12,7 +12,7 @@
 #include "buzzer.hpp"
 #include "udp_socket.hpp"
 #include "wifi_manager.hpp"
-#include "http_server.hpp"
+#include "http_client.hpp"
 
 static const char* TAG = "main";
 
@@ -68,13 +68,17 @@ extern "C" void app_main(void) {
 
     ESP_LOGI(TAG, "Mine Detector system successfully initialized.");
 
-    // 6. Instantiate and Launch Controller Task
     static mine_detector::Controller controller(sensor, buzzer, gps, udp_socket, 1000);
-    
-    // Launch FreeRTOS Task or std::thread for the ESP32 Controller loop
-    std::thread controller_thread([&controller]() {
-        controller.start(); // Non-blocking, loops telemetry & sends alerts
-    });
-
-    controller_thread.detach(); // ESP32 main task exits or sleeps while thread runs
+    xTaskCreate(
+        [](void* arg) {
+            auto* ctrl = static_cast<mine_detector::Controller*>(arg);
+            ctrl->start();
+            vTaskDelete(NULL);
+        },
+        "controller_task",
+        4096,         // Stack size in bytes
+        &controller,  // Task input parameter
+        5,            // Task priority
+        NULL
+    ); // ESP32 main task exits or sleeps while thread runs
 }

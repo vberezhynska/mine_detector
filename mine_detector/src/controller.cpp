@@ -90,13 +90,15 @@ namespace mine_detector {
                         gps_data->longitude, 
                         static_cast<unsigned int>(gps_data->satellite_count), 
                         gps_data->altitude);
+
+                pImpl->udp_socket.sendCoordinates();
             }
 
             bool touched = pImpl->sensor.isTouched();
             if (touched) {
                     ESP_LOGW(TAG, "[ALERT] Mine detected!");
                     pImpl->buzzer.turnOn();
-                    pImpl->udp_socket.sendTouched();
+                    pImpl->udp_socket.sendCoordinates();
             } else {
                     pImpl->buzzer.turnOff();
             }

@@ -1,4 +1,5 @@
 #include "udp_server.hpp"
+
 #include <iostream>
 #include <sstream>
 #include <cstring>
@@ -6,6 +7,8 @@
 #include <sys/socket.h>
 #include <vector>
 #include <netinet/in.h>
+
+#include "dto/telemetry_types.hpp"
 
 namespace mine_tracker {
     struct UdpServer::Impl{
@@ -56,21 +59,25 @@ namespace mine_tracker {
         return true;
     }
 
-    std::string UdpServer::receive_package(){
-        if (!pImpl->is_running) return "";
+    mine_tracker::UdpPacket UdpServer::receive_package(){
+        if (!pImpl->is_running) return std::monostate{};
 
-        char buffer[1024] = {0}; //TODO: increase when work with GPS data
+        uint8_t buffer[1024];
         sockaddr_in client_addr{};
         socklen_t addr_len = sizeof(client_addr);
 
-        // Blocking wait for incoming data from ESP32
-        ssize_t bytes_received = ::recvfrom(pImpl->socket_fd, buffer, sizeof(buffer) - 1, 0,
-                                        reinterpret_cast<struct sockaddr*>(&client_addr), &addr_len);
+        ssize_t bytes_received = ::recvfrom(pImpl->socket_fd, buffer, sizeof(buffer), 0,
+                                       reinterpret_cast<struct sockaddr*>(&client_addr), &addr_len);
 
-            if (bytes_received > 0) {
-                return std::string(buffer, bytes_received);
-            }
+        if (bytes_received <= 0) return std::monostate{};
 
-        return "";
+        auto type = static_cast<MessageType>(buffer[0]);
+        if (type == MessageType::TELEMETRY && bytes_received == sizeof(TelemetryPayload)) {
+            TelemetryPayload payload;
+            std::memcpy(&payload, buffer, sizeof(TelemetryPayload));
+            return payload;
+        }
+
+        return std::monostate{};
     }
 } //namespace mine_tracker

@@ -13,12 +13,15 @@ idf_component_register(
     INCLUDE_DIRS 
         "../include"
         "../include/interfaces"
+        "../include/external"
     REQUIRES 
         driver
         esp_eth
         freertos
         nvs_flash
         esp_wifi
+        esp_event
+        lwip
         esp_http_client
 )
 

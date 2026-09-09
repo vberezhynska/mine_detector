@@ -1,19 +1,17 @@
 #pragma once
 
+#include <cstddef>
+#include <cstdint>
 #include <string>
 #include <memory>
+
 #include "interfaces/ISocket.hpp"
+#include "external/telemetry_types.hpp"
+
 
 namespace mine_detector { struct GpsSystemFixData; }
 
 namespace networking {
-    // Binary struct payload (packed to save airtime and eliminate string parsing overhead)
-    struct __attribute__((packed)) GpsPacket {
-        float latitude;
-        float longitude;
-        uint32_t timestamp;
-    };
-
     class UdpSocket : ISocket {
     public:
         explicit UdpSocket(std::string server_ip, uint16_t serverPort) ;
@@ -26,14 +24,12 @@ namespace networking {
 
         bool init() override;
         void sendCoordinates();
-        void sendTouched();
 
     private:
         struct Impl;
         std::unique_ptr<Impl> pImpl;
         static constexpr const char* TAG = "UdpGpsSender";
 
-        bool send_payload(const std::string& message);     
+        bool send_payload(const void* data, std::size_t size);     
     };
 } //namespace networking
-

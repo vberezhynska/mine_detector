@@ -1,9 +1,11 @@
 #pragma once
 
 #include <string>
+#include <cstdint>
 #include <memory>
+#include "dto/telemetry_types.hpp"
 
-namespace mine_tracker {
+namespace mine_tracker {   
     class UdpServer {
         public:
             explicit UdpServer(uint16_t port);
@@ -18,7 +20,7 @@ namespace mine_tracker {
             void stop();
 
             //Blocking call to receive a single package
-            std::string receive_package();
+            UdpPacket receive_package();
 
             private:
                 struct Impl;

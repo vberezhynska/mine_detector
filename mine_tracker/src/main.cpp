@@ -28,9 +28,15 @@ int main(int argc, char* argv[]) {
     std::cout << "[UDP] Server bound to port 5005 successfully." << std::endl;
     std::thread udp_thread([&udp_server](){
         while(g_running) {
-            std::string udp_package = udp_server.receive_package();
-            if (!udp_package.empty()){
-                std::cout << "[UDP DATA] Received: " << udp_package << std::endl;
+            auto udp_package = udp_server.receive_package();
+            if (std::holds_alternative<mine_tracker::TelemetryPayload>(udp_package)) {
+            const auto& telemetry = std::get<mine_tracker::TelemetryPayload>(udp_package);
+            
+                std::cout << "[UDP DATA] Mine Alert Received!\n"
+                        << "  ├─ Latitude:  " << telemetry.latitude << "\n"
+                        << "  ├─ Longitude: " << telemetry.longitude << "\n"
+                        << "  ├─ GPS Fix:   " << static_cast<int>(telemetry.gps_type) << "\n"
+                        << "  └─ Timestamp: " << telemetry.timestamp << std::endl;
             }
         }
     });

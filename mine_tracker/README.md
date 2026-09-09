@@ -1,10 +1,5 @@
 Testing UDP SERVER from PowerShell:
-$u = [System.Net.Sockets.UdpClient]::new(); $b = [Text.Encoding]::UTF8.GetBytes("TOUCH_EVENT_FROM_PC"); $u.Send($b, $b.Length, "10.42.0.1", 5005); $u.Close()
-
-$u = [System.Net.Sockets.UdpClient]::new(); $b = [Text.Encoding]::UTF8.GetBytes("TOUCH_EVENT_FROM_PC"); $u.Send($b, $b.Length, "192.168.1.199", 5005); $u.Close()
-
-Lat/Long UDP:
-$u = [System.Net.Sockets.UdpClient]::new(); $b = [Text.Encoding]::UTF8.GetBytes('{"event":"MINE_FOUND","lat":50451200,"lon":30523400}'); $u.Send($b, $b.Length, "10.42.0.1", 5005); $u.Close(); $u.Dispose()
+$u = [System.Net.Sockets.UdpClient]::new(); $b = [byte[]](0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00); [System.BitConverter]::GetBytes([uint32]50451200).CopyTo($b, 1); [System.BitConverter]::GetBytes([uint32]30523400).CopyTo($b, 5); $b[9] = [byte]2; [System.BitConverter]::GetBytes([uint32]1700000000).CopyTo($b, 10); $u.Send($b, $b.Length, "192.168.1.199", 5005); $u.Close()
 
 Testing HTTP SERVER from PowerShell:
 GET:
@@ -41,4 +36,11 @@ scp -r mine_tracker/ vabe@10.42.0.1:~/Documents
 cd mine_tracker/
 cmake -S . -B build -G Ninja
 cmake --build build
+
+kill process:
+pgrep mine_tracker
+kill -15 <PID>
+
+*** Pi AP ***
+sudo nmcli device wifi hotspot ifname wlan0 con-name "OfflineAP" ssid "ESP32_Pi_Network" password "PiSecretKey123"
 

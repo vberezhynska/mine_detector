@@ -51,29 +51,33 @@ namespace networking {
     }
 
     void UdpSocket::sendCoordinates(){
-        
+        mine_tracker::TelemetryPayload telemetry{
+            .latitude = 50451200,
+            .longitude = 30523400,
+            .gps_type = 1,
+            .timestamp = 1215465456
+        };
+
+        bool isSent = send_payload(&telemetry, sizeof(telemetry));
+        if (!isSent) {
+            ESP_LOGE(TAG, "Send telemetry failed");
+        }
     }
 
-    void UdpSocket::sendTouched(){
-        std::string mesage = "[UDP Socket] Mine detected!";
-        auto isSent = send_payload(mesage);
+    bool UdpSocket::send_payload(const void* data, std::size_t size) {
+        if (!data || size == 0 || pImpl->socket_fd < 0) {
+                return false;
+            }
 
-        if (!isSent)
-            ESP_LOGE(TAG, "Send message failed");
-    }
+            ssize_t bytes_sent = ::sendto(
+                pImpl->socket_fd,
+                data,
+                size,
+                0,
+                reinterpret_cast<struct sockaddr*>(&pImpl->server_addr),
+                sizeof(pImpl->server_addr)
+            );
 
-    bool UdpSocket::send_payload(const std::string& message) {
-        if (pImpl->socket_fd < 0) return false;
-
-        ssize_t bytes_sent = ::sendto(
-            pImpl->socket_fd,
-            message.c_str(),
-            message.length(),
-            0,
-            reinterpret_cast<struct sockaddr*>(&pImpl->server_addr),
-            sizeof(pImpl->server_addr)
-        );
-
-        return (bytes_sent == static_cast<ssize_t>(message.length()));
-    }
+            return (bytes_sent == static_cast<ssize_t>(size));
+        }
 } //namespace networking
