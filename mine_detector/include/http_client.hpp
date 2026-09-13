@@ -22,5 +22,6 @@ class HttpClient : public ISocket {
     private:
         struct Impl;
         std::unique_ptr<Impl> pImpl;
+        bool parseMineAlertResponse();
 };
 } //namespace networking

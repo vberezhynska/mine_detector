@@ -2,9 +2,7 @@
 
 ## 📌 High Priority (deadline 13.09)
 ## Definition of Done: working UDP with GPS and HTTP with alert
-- [ ] Check cast to int on send and get
-- [ ] Last GPS - thing how to treat outdated location. Like is_fresh or last updated timestemp
-- [ ] Check what is with timestemp. Why it's 410
+- [+ ? ] Check cast to int on send and get
 - [ ] Mine detector - parse http response and send retry
 - [ ] Mine detector - Signal after succeed http post. Max 3 failed attemps. Then Signal, otherwise rat won't be happy
 
@@ -12,6 +10,7 @@
 ## Definition of Done: fully working solution with QG Control and correctly identified flags
 - [ ] Add parser and location GPS logic within Radius R
 - [ ] Identify flags what are in radius R
+- [ ] Last GPS - thing how to treat outdated location. Like is_fresh or last updated timestemp
 - [ ] Add QG Control
 - [ ] Heartbit for ESP32, tracked by R_Pi
 - [ ] Mine detector - Error handler in case of 3 failed http - may be fail heartbit or so

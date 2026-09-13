@@ -49,6 +49,36 @@ namespace networking {
 
         return true;
     }
+
+    bool HttpClient::parseMineAlertResponse() {
+        char response_buffer[256] = {0};
+        int read_len = esp_http_client_read_response(pImpl->client, response_buffer, sizeof(response_buffer) - 1);
+        
+        if (read_len <= 0) {
+            ESP_LOGE(TAG, "No response body received (read_len=%d)", read_len);
+            return false;
+        }
+
+        response_buffer[read_len] = '\0';
+        auto parsed = json::parse(response_buffer, nullptr, false);
+
+        if (parsed.is_discarded() || !parsed.contains("status") || !parsed["status"].is_string()) {
+            ESP_LOGE(TAG, "Failed to parse JSON or 'status' field missing: %s", response_buffer);
+            return false;
+        }
+
+        if (parsed["status"] == "success") {
+            ESP_LOGI(TAG, "Alert validated by server: success");
+            return true;
+        }
+
+        ESP_LOGE(TAG, "Server responded with status: %s", parsed["status"].get<std::string>().c_str());
+        if (parsed.contains("error") && parsed["error"].is_string()) {
+            ESP_LOGE(TAG, "Error detail: %s", parsed["error"].get<std::string>().c_str());
+        }
+        return false;
+    }
+
     //TODO: update with TelemetryPayload
     bool HttpClient::sendMineAlert(int32_t latitude, int32_t longitude, int8_t gp_type){
             json alertJson = {
@@ -59,8 +89,9 @@ namespace networking {
             };
 
         std::string payload = alertJson.dump();
+        //TODO: add port to base url
         std::string fullUrl = pImpl->baseUrl + ":" + std::to_string(pImpl->port) + pImpl->alert_url;
-            //TODO: add posit to base url or so
+
         ESP_LOGI(TAG, "HTTP sendMineAlert will send to fullUrl: %s", 
              fullUrl.c_str());
 
@@ -71,21 +102,23 @@ namespace networking {
         esp_http_client_set_post_field(pImpl->client, payload.c_str(), static_cast<int>(payload.length()));
 
         esp_err_t err = esp_http_client_perform(pImpl->client); //opens and closes socket connection
-        bool success = false;
-        if (err == ESP_OK) { //TODO: rewrite this if-else
-            int statusCode = esp_http_client_get_status_code(pImpl->client);
-            if (statusCode >= 200 && statusCode < 300) {
-                ESP_LOGI(TAG, "Alert sent successfully (HTTP %d)", statusCode);
-                success = true;
-            } else {
-                ESP_LOGE(TAG, "Server responded with error status: %d", statusCode);
-            }
-        } else {
-            ESP_LOGE(TAG, "HTTP POST failed: %s", esp_err_to_name(err));
-        }       
 
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "HTTP POST failed: %s", esp_err_to_name(err));
+            esp_http_client_close(pImpl->client);
+            return false;
+        }
+
+        int statusCode = esp_http_client_get_status_code(pImpl->client);
+        if (statusCode >= 200 && statusCode < 300 && parseMineAlertResponse()) { 
+            ESP_LOGI(TAG, "Alert sent successfully (HTTP %d)", statusCode);
+            esp_http_client_close(pImpl->client);
+            return true;
+        }
+        
+        ESP_LOGE(TAG, "Server responded with error status: %d", statusCode);
         esp_http_client_close(pImpl->client);
-        return success;
+        return false;
     }
 
 } //namespace networking

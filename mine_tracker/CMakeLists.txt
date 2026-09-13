@@ -42,9 +42,8 @@ endif()
 
 # ---- Libraries ----
 add_library(tracker 
-    src/dto/point.cpp
-    # Add other source files here as you create them, e.g.:
-    # src/controller.cpp
+    src/udp_server.cpp
+    src/http_server.cpp
 )
 
 # Explicitly declare where your header files live
@@ -63,8 +62,6 @@ target_link_libraries(tracker PUBLIC
 # ---- Main Executable ----
 add_executable(mine_tracker 
     src/main.cpp
-    src/udp_server.cpp
-    src/http_server.cpp
 )
 
 # Link your tracker library to the executable
