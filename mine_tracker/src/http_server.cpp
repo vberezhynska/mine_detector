@@ -66,10 +66,12 @@ bool HttpServer::init(uint16_t port) {
             data.event = payload.at("event").get<std::string>();
             data.lat = payload.at("lat").get<int32_t>();
             data.lon = payload.at("lon").get<int32_t>();
+            data.gp_type = payload.at("gpType").get<int32_t>();
 
             std::cout << "[MINE ALERT] Event: " << data.event 
-                      << " | Lat: " << data.lat 
-                      << " | Lon: " << data.lon << std::endl;
+                      << " | Lat: "     << data.lat 
+                      << " | Lon: "     << data.lon << std::endl
+                      << " | GpType: "  << data.gp_type << std::endl;
 
             // 2. Fetch callback atomically under lock with a 100ms timeout
             AlertCallback cb_copy = nullptr;

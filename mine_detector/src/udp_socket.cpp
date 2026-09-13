@@ -2,12 +2,14 @@
 
 #include <string>
 #include <cstring>
+#include <chrono>
 #include <sys/socket.h>
 #include <netdb.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_err.h"
 #include "esp_log.h"
+#include "gps_decoder.hpp"
 
 namespace networking {
     struct UdpSocket::Impl {
@@ -50,12 +52,15 @@ namespace networking {
         return true;
     }
 
-    void UdpSocket::sendCoordinates(){
-        mine_tracker::TelemetryPayload telemetry{
-            .latitude = 50451200,
-            .longitude = 30523400,
-            .gps_type = 1,
-            .timestamp = 1215465456
+    void UdpSocket::sendCoordinates(mine_detector::GpsSystemFixData& data){
+         auto now = std::chrono::system_clock::now(); //TODO: think if I should move it to GpsSystemFixData
+        auto seconds = std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count();
+
+        mine_tracker::TelemetryPayload telemetry {
+            .latitude = data.latitude_int,
+            .longitude = data.longitude_int,
+            .gps_type = static_cast<uint8_t>(data.gp_type),
+            .timestamp = static_cast<uint32_t>(seconds)
         };
 
         bool isSent = send_payload(&telemetry, sizeof(telemetry));

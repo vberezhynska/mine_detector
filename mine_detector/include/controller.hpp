@@ -7,7 +7,7 @@
 #include "touch_sensor.hpp"
 #include "gps_neo.hpp"
 
-namespace networking { class UdpSocket; };
+namespace networking { class UdpSocket; class HttpClient; };
 
 namespace mine_detector {
     class Controller : IController {
@@ -16,6 +16,7 @@ namespace mine_detector {
                 Buzzer& buzzer, 
                 GpsNeo& gps, 
                 const std::unique_ptr<networking::UdpSocket>& udp_socket,
+                const std::unique_ptr<networking::HttpClient>& http_client,
                 uint32_t pollIntervalMs = 500);
             ~Controller();
 

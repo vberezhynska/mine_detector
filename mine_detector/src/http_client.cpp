@@ -49,12 +49,13 @@ namespace networking {
 
         return true;
     }
-
-    bool HttpClient::sendMineAlert(int32_t latitude, int32_t longitude){
+    //TODO: update with TelemetryPayload
+    bool HttpClient::sendMineAlert(int32_t latitude, int32_t longitude, int8_t gp_type){
             json alertJson = {
                 {"event", "MINE_DETECTED"},
                 {"lat", latitude},
-                {"lon", longitude}
+                {"lon", longitude},
+                {"gpType", gp_type}
             };
 
         std::string payload = alertJson.dump();

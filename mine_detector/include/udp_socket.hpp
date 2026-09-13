@@ -23,7 +23,7 @@ namespace networking {
         UdpSocket& operator=(UdpSocket&&) noexcept;
 
         bool init() override;
-        void sendCoordinates();
+        void sendCoordinates(mine_detector::GpsSystemFixData& data);
 
     private:
         struct Impl;

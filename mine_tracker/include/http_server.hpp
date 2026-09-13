@@ -12,6 +12,7 @@ namespace mine_tracker {
         std::string event;
         int32_t lat;
         int32_t lon;
+        int8_t gp_type;
     };
 
     struct StatusData {

@@ -146,10 +146,12 @@ namespace mine_detector {
         outPos.gp_type = NMEA_Type::GPGGA;
         if (strlen(tokens[2]) > 0 && strlen(tokens[3]) > 0) {
             outPos.latitude = parse_coordinate(tokens[2], tokens[3]);
+            outPos.latitude_int = to_int32_point(outPos.latitude);
         }
         
         if (strlen(tokens[4]) > 0 && strlen(tokens[5]) > 0) {
             outPos.longitude = parse_coordinate(tokens[4], tokens[5]);
+            outPos.longitude_int = to_int32_point(outPos.longitude);
         }
 
         // Field 9: Altitude -> double
@@ -188,10 +190,12 @@ namespace mine_detector {
         // Parse Coordinates
         if (strlen(tokens[3]) > 0 && strlen(tokens[4]) > 0) {
             outPos.latitude = parse_coordinate(tokens[3], tokens[4]);
+            outPos.latitude_int = to_int32_point(outPos.latitude);
         }
 
         if (strlen(tokens[5]) > 0 && strlen(tokens[6]) > 0) {
             outPos.longitude = parse_coordinate(tokens[5], tokens[6]);
+            outPos.longitude_int = to_int32_point(outPos.longitude);
         }
 
         outPos.fix_valid  = true;
@@ -226,10 +230,12 @@ namespace mine_detector {
         // Parse Coordinates
         if (strlen(tokens[1]) > 0 && strlen(tokens[2]) > 0) {
             outPos.latitude = parse_coordinate(tokens[1], tokens[2]);
+            outPos.latitude_int = to_int32_point(outPos.latitude);
         }
 
         if (strlen(tokens[3]) > 0 && strlen(tokens[4]) > 0) {
             outPos.longitude = parse_coordinate(tokens[3], tokens[4]);
+            outPos.longitude_int = to_int32_point(outPos.longitude);
         }
 
         outPos.fix_valid = true;

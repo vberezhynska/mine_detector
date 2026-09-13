@@ -23,8 +23,10 @@ namespace mine_detector {
     struct GpsSystemFixData {
         NMEA_Type gp_type = NMEA_Type::UNKNOWN; 
         bool fix_valid{false}; //false: module is searching for satellites
-        double latitude{0.0};       
-        double longitude{0.0};      
+        uint32_t latitude_int{0};       
+        uint32_t longitude_int{0}; 
+        double latitude{0.0f};       
+        double longitude{0.0f};      
         double altitude{0.0f};
         float hdop{99.9f}; // hdop < 1 => 1-2 m | 1 <= hdop < 2 => up to 5 m | 2 <= hdop < 5 => more then 5 m | hdop > 5 => very poor
         uint8_t satellite_count{0};

@@ -25,8 +25,12 @@ constexpr int GPS_TX_PIN       = 22;
 // Network Configuration
 constexpr uint16_t UDP_PORT        = 5005;
 constexpr const char* UDP_IP       = "10.42.0.1";
+//constexpr const char* UDP_IP       = "192.168.0.199";
 constexpr const char* WIFI_SSID     = "ESP32_Pi_Network";
 constexpr const char* WIFI_PASS     = "PiSecretKey123";
+
+//constexpr const char* HTTP_BASE_URL     = "192.168.0.199";
+//constexpr const char* HTTP_BASE_URL     = "http://10.42.0.1";
 
 extern "C" void app_main(void) {
     ESP_LOGI(TAG, "Initializing Mine Detector application...");
@@ -39,22 +43,22 @@ extern "C" void app_main(void) {
     // WiFi
     auto wifi = networking::WifiManager(WIFI_SSID, WIFI_PASS);
     if (!wifi.connect()) {
-        ESP_LOGE(TAG, "Failed to connect to Wi-Fi AP!");
+        ESP_LOGE(TAG, "Failed to connect to Wi-Fi AP.");
         return;
     }
 
     if (!sensor.init()) {
-        ESP_LOGE(TAG, "Failed to initialize touch sensor!");
+        ESP_LOGE(TAG, "Failed to initialize touch sensor.");
         return;
     }
 
     if (!buzzer.init()) {
-        ESP_LOGE(TAG, "Failed to initialize buzzer!");
+        ESP_LOGE(TAG, "Failed to initialize buzzer.");
         return;
     }
 
     if (!gps.init()) {
-        ESP_LOGE(TAG, "Failed to initialize GPS!");
+        ESP_LOGE(TAG, "Failed to initialize GPS.");
         return;
     }
 
@@ -62,13 +66,19 @@ extern "C" void app_main(void) {
     static auto udp_socket = std::make_unique<networking::UdpSocket>(UDP_IP, UDP_PORT);
 
     if (!udp_socket->init()) {
-        ESP_LOGE(TAG, "Failed to initialize UDP socket!");
+        ESP_LOGE(TAG, "Failed to initialize UDP socket.");
+        return;
+    }
+
+    static auto http_client = std::make_unique<networking::HttpClient>(UDP_IP);
+    if (!http_client->init()){
+        ESP_LOGE(TAG, "Failed to initialize HTTP client.");
         return;
     }
 
     ESP_LOGI(TAG, "Mine Detector system successfully initialized.");
 
-    static mine_detector::Controller controller(sensor, buzzer, gps, udp_socket, 1000);
+    static mine_detector::Controller controller(sensor, buzzer, gps, udp_socket, http_client, 1000);
     xTaskCreate(
         [](void* arg) {
             auto* ctrl = static_cast<mine_detector::Controller*>(arg);

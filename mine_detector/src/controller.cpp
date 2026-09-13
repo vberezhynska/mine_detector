@@ -1,4 +1,5 @@
 #include "controller.hpp"
+#include <cstdint>
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -6,6 +7,7 @@
 
 #include "gps_decoder.hpp"
 #include "udp_socket.hpp"
+#include "http_client.hpp"
 
 static const char* TAG = "Controller";
 
@@ -17,18 +19,22 @@ namespace mine_detector {
         Buzzer& buzzer;
         GpsNeo& gps;
         networking::UdpSocket& udp_socket;
+        networking::HttpClient& http_client;
         uint32_t pollIntervalMs;
         bool is_running{false};
+        GpsSystemFixData last_gps_data{ .latitude = 0.0f, .longitude = 0.0f };
 
         Impl(TouchSensor& sensor, 
                             Buzzer& buzzer, 
                             GpsNeo& gps,
                             networking::UdpSocket& udp_socket,
+                            networking::HttpClient& http_client,
                             uint32_t pollIntervalMs) 
                 : sensor(sensor), 
                 buzzer(buzzer), 
                 gps(gps), 
                 udp_socket(udp_socket),
+                http_client(http_client),
                 pollIntervalMs(pollIntervalMs) {}
     };
 
@@ -36,8 +42,9 @@ namespace mine_detector {
                             Buzzer& buzzer, 
                             GpsNeo& gps,
                             const std::unique_ptr<networking::UdpSocket>& udp_socket,
+                            const std::unique_ptr<networking::HttpClient>& http_client,
                             uint32_t pollIntervalMs)
-                : pImpl(std::make_unique<Impl>(sensor, buzzer, gps, *udp_socket, pollIntervalMs)) { }
+                : pImpl(std::make_unique<Impl>(sensor, buzzer, gps, *udp_socket, *http_client, pollIntervalMs)) { }
 
     Controller::~Controller() {
         stop();
@@ -91,14 +98,18 @@ namespace mine_detector {
                         static_cast<unsigned int>(gps_data->satellite_count), 
                         gps_data->altitude);
 
-                pImpl->udp_socket.sendCoordinates();
+                pImpl->udp_socket.sendCoordinates(*gps_data);
+                pImpl->last_gps_data = *gps_data;
             }
 
             bool touched = pImpl->sensor.isTouched();
             if (touched) {
                     ESP_LOGW(TAG, "[ALERT] Mine detected!");
                     pImpl->buzzer.turnOn();
-                    pImpl->udp_socket.sendCoordinates();
+                    pImpl->http_client.sendMineAlert(
+                        pImpl->last_gps_data.latitude, 
+                        pImpl->last_gps_data.longitude,
+                        static_cast<uint8_t>(pImpl->last_gps_data.gp_type));
             } else {
                     pImpl->buzzer.turnOff();
             }

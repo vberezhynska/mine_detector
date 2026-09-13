@@ -18,7 +18,7 @@ class HttpClient : public ISocket {
         HttpClient& operator=(HttpClient&&) noexcept;
 
         bool init() override;
-        bool sendMineAlert(int32_t latitude, int32_t longitude);
+        bool sendMineAlert(int32_t latitude, int32_t longitude, int8_t gp_type);
     private:
         struct Impl;
         std::unique_ptr<Impl> pImpl;
