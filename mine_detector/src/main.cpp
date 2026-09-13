@@ -23,14 +23,14 @@ constexpr int GPS_RX_PIN       = 21;
 constexpr int GPS_TX_PIN       = 22;
 
 // Network Configuration
-constexpr uint16_t UDP_PORT        = 5005;
-constexpr const char* UDP_IP       = "10.42.0.1";
-//constexpr const char* UDP_IP       = "192.168.0.199";
+constexpr uint16_t UDP_PORT         = 5005;
+constexpr uint16_t HTTP_PORT        = 8080;
+constexpr const char* UDP_IP        = "10.42.0.1";
+//constexpr const char* UDP_IP      = "192.168.0.199";
 constexpr const char* WIFI_SSID     = "ESP32_Pi_Network";
 constexpr const char* WIFI_PASS     = "PiSecretKey123";
 
-//constexpr const char* HTTP_BASE_URL     = "192.168.0.199";
-//constexpr const char* HTTP_BASE_URL     = "http://10.42.0.1";
+constexpr const char* HTTP_BASE_URL = "http://10.42.0.1";
 
 extern "C" void app_main(void) {
     ESP_LOGI(TAG, "Initializing Mine Detector application...");
@@ -70,7 +70,7 @@ extern "C" void app_main(void) {
         return;
     }
 
-    static auto http_client = std::make_unique<networking::HttpClient>(UDP_IP);
+    static auto http_client = std::make_unique<networking::HttpClient>(HTTP_BASE_URL, HTTP_PORT);
     if (!http_client->init()){
         ESP_LOGE(TAG, "Failed to initialize HTTP client.");
         return;

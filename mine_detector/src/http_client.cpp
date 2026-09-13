@@ -59,8 +59,8 @@ namespace networking {
             };
 
         std::string payload = alertJson.dump();
-        std::string fullUrl = pImpl->baseUrl + pImpl->alert_url;
-
+        std::string fullUrl = pImpl->baseUrl + ":" + std::to_string(pImpl->port) + pImpl->alert_url;
+            //TODO: add posit to base url or so
         ESP_LOGI(TAG, "HTTP sendMineAlert will send to fullUrl: %s", 
              fullUrl.c_str());
 
@@ -71,20 +71,21 @@ namespace networking {
         esp_http_client_set_post_field(pImpl->client, payload.c_str(), static_cast<int>(payload.length()));
 
         esp_err_t err = esp_http_client_perform(pImpl->client); //opens and closes socket connection
-
-        if (err == ESP_OK) {
+        bool success = false;
+        if (err == ESP_OK) { //TODO: rewrite this if-else
             int statusCode = esp_http_client_get_status_code(pImpl->client);
             if (statusCode >= 200 && statusCode < 300) {
                 ESP_LOGI(TAG, "Alert sent successfully (HTTP %d)", statusCode);
-                return true;
+                success = true;
+            } else {
+                ESP_LOGE(TAG, "Server responded with error status: %d", statusCode);
             }
+        } else {
+            ESP_LOGE(TAG, "HTTP POST failed: %s", esp_err_to_name(err));
+        }       
 
-            ESP_LOGE(TAG, "Server responded with error status: %d", statusCode);
-            return false;
-        }
-
-        ESP_LOGE(TAG, "HTTP POST failed: %s", esp_err_to_name(err));
-        return false;
+        esp_http_client_close(pImpl->client);
+        return success;
     }
 
 } //namespace networking

@@ -1,5 +1,5 @@
 Testing UDP SERVER from PowerShell:
-$u = [System.Net.Sockets.UdpClient]::new(); $b = [byte[]](0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00); [System.BitConverter]::GetBytes([uint32]50451200).CopyTo($b, 1); [System.BitConverter]::GetBytes([uint32]30523400).CopyTo($b, 5); $b[9] = [byte]2; [System.BitConverter]::GetBytes([uint32]1700000000).CopyTo($b, 10); $u.Send($b, $b.Length, "192.168.1.199", 5005); $u.Close()
+$u = [System.Net.Sockets.UdpClient]::new(); $b = [byte[]](0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00); [System.BitConverter]::GetBytes([uint32]50451200).CopyTo($b, 1); [System.BitConverter]::GetBytes([uint32]30523400).CopyTo($b, 5); $b[9] = [byte]2; [System.BitConverter]::GetBytes([uint32]1700000000).CopyTo($b, 10); $u.Send($b, $b.Length, "vabe-pi", 5005); $u.Close()
 
 Testing HTTP SERVER from PowerShell:
 GET:
@@ -21,6 +21,7 @@ cmake .. -DCROW_BUILD_EXAMPLES=OFF -DCROW_BUILD_TESTS=OFF
 sudo make install
 
 *** On clean R Pi ***
+ping vabe-pi.local
 sudo apt update
 sudo apt install -y build-essential cmake libasio-dev nlohmann-json3-dev git
 
@@ -40,7 +41,24 @@ cmake --build build
 kill process:
 pgrep mine_tracker
 kill -15 <PID>
+kill -9 <PID> //forse
 
 *** Pi AP ***
 sudo nmcli device wifi hotspot ifname wlan0 con-name "OfflineAP" ssid "ESP32_Pi_Network" password "PiSecretKey123"
+// Automatic startup
+sudo nmcli connection modify Pi-AP connection.autoconnect yes
+// verify it's active
+nmcli connection show --active
+// turn off
+sudo nmcli connection down Pi-AP
+//turn on
+sudo nmcli connection up Pi-AP
+//check ip address
+ip addr show wlan0
+# Switch from AP back to Home Wi-Fi directly
+sudo nmcli device wifi connect "netplan-wlan0-WirelessNet_2" password "YOUR_HOME_PASSWORD"
+# Set high autoconnect priority on Home Wi-Fi
+sudo nmcli connection modify "netplan-wlan0-WirelessNet_2" connection.autoconnect-priority 10
 
+# Set lower autoconnect priority on AP
+sudo nmcli connection modify "Pi-AP" connection.autoconnect-priority 1
