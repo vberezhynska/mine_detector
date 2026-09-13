@@ -6,6 +6,23 @@
 
 namespace mine_tracker {
 
+    enum class NMEA_Type : uint8_t {
+        GPGGA = 0, //best one
+        GPRMC = 1,
+        GPGLL = 2,
+        UNKNOWN = 255
+    };
+
+    constexpr const char* to_string(NMEA_Type type) {
+        switch (type) {
+            case NMEA_Type::GPGGA:   return "GPGGA";
+            case NMEA_Type::GPRMC:   return "GPRMC";
+            case NMEA_Type::GPGLL:   return "GPGLL";
+            case NMEA_Type::UNKNOWN: 
+            default:                 return "UNKNOWN";
+        }
+    }
+
 enum class MessageType : uint8_t {
     TELEMETRY  = 0x01
 };

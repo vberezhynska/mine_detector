@@ -1,27 +1,11 @@
 #pragma once
 
 #include <cstdint>
+#include "external/telemetry_types.hpp"
 
 namespace mine_detector {
-    enum class NMEA_Type : uint8_t {
-        GPGGA = 0, //best one
-        GPRMC = 1,
-        GPGLL = 2,
-        UNKNOWN = 255
-    };
-
-    constexpr const char* to_string(NMEA_Type type) {
-        switch (type) {
-            case NMEA_Type::GPGGA:   return "GPGGA";
-            case NMEA_Type::GPRMC:   return "GPRMC";
-            case NMEA_Type::GPGLL:   return "GPGLL";
-            case NMEA_Type::UNKNOWN: 
-            default:                 return "UNKNOWN";
-        }
-    }
-
     struct GpsSystemFixData {
-        NMEA_Type gp_type = NMEA_Type::UNKNOWN; 
+        mine_tracker::NMEA_Type gp_type = mine_tracker::NMEA_Type::UNKNOWN; 
         bool fix_valid{false}; //false: module is searching for satellites
         uint32_t latitude_int{0};       
         uint32_t longitude_int{0}; 

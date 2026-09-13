@@ -2,6 +2,7 @@
 
 #include "crow.h"
 #include <external/json.hpp>
+#include "dto/telemetry_types.hpp"
 
 #include <iostream>
 #include <mutex>
@@ -71,7 +72,7 @@ bool HttpServer::init(uint16_t port) {
             std::cout << "[MINE ALERT] Event: " << data.event 
                       << " | Lat: "     << data.lat 
                       << " | Lon: "     << data.lon << std::endl
-                      << " | GpType: "  << data.gp_type << std::endl;
+                      << " | GpType: "  << to_string(static_cast<NMEA_Type>(data.gp_type)) << std::endl;
 
             // 2. Fetch callback atomically under lock with a 100ms timeout
             AlertCallback cb_copy = nullptr;

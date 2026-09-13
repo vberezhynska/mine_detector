@@ -8,6 +8,7 @@
 #include "gps_decoder.hpp"
 #include "udp_socket.hpp"
 #include "http_client.hpp"
+#include "external/telemetry_types.hpp"
 
 static const char* TAG = "Controller";
 
@@ -22,7 +23,10 @@ namespace mine_detector {
         networking::HttpClient& http_client;
         uint32_t pollIntervalMs;
         bool is_running{false};
-        GpsSystemFixData last_gps_data{ .latitude = 0.0f, .longitude = 0.0f };
+        GpsSystemFixData last_gps_data{ 
+            .gp_type = mine_tracker::NMEA_Type::UNKNOWN,
+            .latitude = 0.0f, 
+            .longitude = 0.0f };
 
         Impl(TouchSensor& sensor, 
                             Buzzer& buzzer, 
@@ -92,7 +96,7 @@ namespace mine_detector {
             auto gps_data = pImpl->gps.get_data();
             if (gps_data) { 
                 ESP_LOGI(TAG, "[GPS FIX][%s] Lat: %.6f, Lon: %.6f, Sats: %u, Alt: %.1f m", 
-                        to_string(gps_data->gp_type),
+                        mine_tracker::to_string(gps_data->gp_type),
                         gps_data->latitude, 
                         gps_data->longitude, 
                         static_cast<unsigned int>(gps_data->satellite_count), 
@@ -105,11 +109,13 @@ namespace mine_detector {
             bool touched = pImpl->sensor.isTouched();
             if (touched) {
                     ESP_LOGW(TAG, "[ALERT] Mine detected!");
-                    pImpl->buzzer.turnOn();
+                    
                     pImpl->http_client.sendMineAlert(
-                        pImpl->last_gps_data.latitude, 
-                        pImpl->last_gps_data.longitude,
+                        pImpl->last_gps_data.latitude_int, 
+                        pImpl->last_gps_data.longitude_int,
                         static_cast<uint8_t>(pImpl->last_gps_data.gp_type));
+
+                    pImpl->buzzer.turnOn();
             } else {
                     pImpl->buzzer.turnOff();
             }

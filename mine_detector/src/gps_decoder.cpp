@@ -16,6 +16,8 @@
   #include "esp_log.h"
 #endif
 
+#include "external/telemetry_types.hpp"
+
 static const char* TAG = "GPS_DECODER";
 
 namespace mine_detector {
@@ -143,7 +145,7 @@ namespace mine_detector {
         if (!validate_gga_data_quiality(tokens, outPos))
             return false;
 
-        outPos.gp_type = NMEA_Type::GPGGA;
+        outPos.gp_type = mine_tracker::NMEA_Type::GPGGA;
         if (strlen(tokens[2]) > 0 && strlen(tokens[3]) > 0) {
             outPos.latitude = parse_coordinate(tokens[2], tokens[3]);
             outPos.latitude_int = to_int32_point(outPos.latitude);
@@ -186,7 +188,7 @@ namespace mine_detector {
             return false;
         }
 
-        outPos.gp_type = NMEA_Type::GPRMC;
+        outPos.gp_type = mine_tracker::NMEA_Type::GPRMC;
         // Parse Coordinates
         if (strlen(tokens[3]) > 0 && strlen(tokens[4]) > 0) {
             outPos.latitude = parse_coordinate(tokens[3], tokens[4]);
@@ -226,7 +228,7 @@ namespace mine_detector {
             return false;
         }
 
-        outPos.gp_type = NMEA_Type::GPGLL;
+        outPos.gp_type = mine_tracker::NMEA_Type::GPGLL;
         // Parse Coordinates
         if (strlen(tokens[1]) > 0 && strlen(tokens[2]) > 0) {
             outPos.latitude = parse_coordinate(tokens[1], tokens[2]);

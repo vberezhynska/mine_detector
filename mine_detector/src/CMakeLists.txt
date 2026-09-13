@@ -14,15 +14,16 @@ idf_component_register(
         "../include"
         "../include/interfaces"
         "../include/external"
-    REQUIRES 
-        driver
+    REQUIRES       
         esp_eth
-        freertos
-        nvs_flash
         esp_wifi
         esp_event
-        lwip
         esp_http_client
+        esp_timer
+        driver
+        freertos
+        nvs_flash
+        lwip
 )
 
 target_compile_features(${COMPONENT_LIB} PRIVATE cxx_std_20)
