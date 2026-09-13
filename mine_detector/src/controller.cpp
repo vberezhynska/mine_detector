@@ -89,6 +89,13 @@ namespace mine_detector {
         controller->runLoop();
     }
 
+    bool Controller::sendMineAlert(){
+        return pImpl->http_client.sendMineAlert(
+               pImpl->last_gps_data.latitude_int, 
+               pImpl->last_gps_data.longitude_int,
+               static_cast<uint8_t>(pImpl->last_gps_data.gp_type));
+    }
+
     void  Controller::runLoop(){  
         TickType_t lastWakeTime = xTaskGetTickCount();    
         
@@ -110,12 +117,20 @@ namespace mine_detector {
             if (touched) {
                     ESP_LOGW(TAG, "[ALERT] Mine detected!");
                     
-                    pImpl->http_client.sendMineAlert(
-                        pImpl->last_gps_data.latitude_int, 
-                        pImpl->last_gps_data.longitude_int,
-                        static_cast<uint8_t>(pImpl->last_gps_data.gp_type));
-
                     pImpl->buzzer.turnOn();
+                    bool isSucceed = false;
+                    for (uint8_t attempt = 0; attempt < 3 && !isSucceed; ++attempt) {
+                        isSucceed = sendMineAlert();
+                        if (!isSucceed) {
+                            vTaskDelay(pdMS_TO_TICKS(100)); // Brief backoff between retries
+                        }
+                    }
+
+                    if (!isSucceed) {
+                        //TODO: on retry I am updating location for last one. That's probabaly wrong and I should send request with actual location on event trigger
+                        //TODO: Action needed: may be error UDP request of so, if http is down. Or breack heartbit
+                        ESP_LOGE(TAG, "Send flag failed. Action needed!");
+                    }
             } else {
                     pImpl->buzzer.turnOff();
             }

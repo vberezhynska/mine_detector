@@ -35,5 +35,6 @@ namespace mine_detector {
 
             static void task_wrapper(void* arg);
             void runLoop();
+            bool sendMineAlert();
     };
 }; //namespace Controller

@@ -1,17 +1,17 @@
 # Project TODO List
 
-## 📌 High Priority (deadline 13.09)
+## 📌 High Priority (deadline 14.09)
 ## Definition of Done: working UDP with GPS and HTTP with alert
-- [+ ? ] Check cast to int on send and get
-- [ ] Mine detector - parse http response and send retry
-- [ ] Mine detector - Signal after succeed http post. Max 3 failed attemps. Then Signal, otherwise rat won't be happy
+- [ ] Testing gps and http
+- [ ] Add parser and location GPS logic within Radius R
+- [ ] Identify flags what are in radius R
 
 ## 📌 High Priority (deadline 15.09)
 ## Definition of Done: fully working solution with QG Control and correctly identified flags
-- [ ] Add parser and location GPS logic within Radius R
-- [ ] Identify flags what are in radius R
 - [ ] Last GPS - thing how to treat outdated location. Like is_fresh or last updated timestemp
+- [ ] Mine detector: Update send requst with last_gps fight after sensor was triggered
 - [ ] Add QG Control
+- [ ] Mine detector: Act if send flag failed
 - [ ] Heartbit for ESP32, tracked by R_Pi
 - [ ] Mine detector - Error handler in case of 3 failed http - may be fail heartbit or so
 
