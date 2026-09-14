@@ -2,7 +2,8 @@
 
 ## 📌 High Priority (deadline 14.09)
 ## Definition of Done: working UDP with GPS and HTTP with alert
-- [ ] Testing gps and http
+- [ ] Testing gps and http. Merge
+- [ ] Add SQLite DB to store Flags
 - [ ] Add parser and location GPS logic within Radius R
 - [ ] Identify flags what are in radius R
 
