@@ -24,12 +24,14 @@ usbipd attach --wsl --busid 1-1
 usbipd list
 // shoudl be  : 1-1    10c4:ea60  CP2102N USB to UART Bridge Controller                         Attached
 
---- In WSL ---
-cd mine_detector //main project file
+--- In WSL/Docker ---
+from mine_detector
 idf.py build
 cd mine_detector
 
-/// To Flash from WSL ///
+>> if build issue: idf.py build -- -j1
+
+/// To Flash from WSL/Docker ///
 ls /dev/ttyUSB* // should have dev/ttyUSB0. If not => rebuild DevContainer
 sudo chmod 666 /dev/ttyUSB0
 idf.py -p /dev/ttyUSB0 flash monitor
