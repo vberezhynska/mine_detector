@@ -1,23 +1,21 @@
 # Project TODO List
 
-## 📌 High Priority (deadline 14.09)
+## 📌 High Priority (deadline 16.09)
 ## Definition of Done: working UDP with GPS and HTTP with alert
-- [ ] Testing gps and http. Merge
-- [ ] Add SQLite DB to store Flags
-- [ ] Add parser and location GPS logic within Radius R
-- [ ] Identify flags what are in radius R
+- [ ] Add Bayesian filtering
 
-## 📌 High Priority (deadline 15.09)
+## 📌 High Priority (deadline 18.09)
 ## Definition of Done: fully working solution with QG Control and correctly identified flags
+- [ ] Testing gps and http
 - [ ] Last GPS - thing how to treat outdated location. Like is_fresh or last updated timestemp
 - [ ] Mine detector: Update send requst with last_gps fight after sensor was triggered
 - [ ] Add QG Control
+- [ ] Store Flags to DB
 - [ ] Mine detector: Act if send flag failed
 - [ ] Heartbit for ESP32, tracked by R_Pi
 - [ ] Mine detector - Error handler in case of 3 failed http - may be fail heartbit or so
 
 ## 📝 Testing + Medium Priority (deadline 19.09)
-- [ ] Think how to store GPS coordinates
 - [ ] Write tests
 - [ ] Write md project description
 - [ ] Move hardcoded values to Configuration
