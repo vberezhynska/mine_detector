@@ -10,7 +10,7 @@ curl.exe -i -X GET http://192.168.1.199:8080/v1/api/status
 POST:
 POST http://10.42.0.1:8080/v1/api/alerts
 POST http://192.168.1.199:8080/v1/api/alerts
-{"event": "MINE_FOUND", "lat": 50451200, "lon": 30523400}
+{"event": "MINE_FOUND", "lat_int": 50451200, "lon_int": 30523400, "gpType": 2}
 
 
 # Clone Crow repository

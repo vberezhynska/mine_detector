@@ -83,8 +83,8 @@ namespace networking {
     bool HttpClient::sendMineAlert(int32_t latitude, int32_t longitude, int8_t gp_type){
             json alertJson = {
                 {"event", "MINE_DETECTED"},
-                {"lat", latitude},
-                {"lon", longitude},
+                {"lat_int", latitude},
+                {"lon_int", longitude},
                 {"gpType", gp_type}
             };
 
