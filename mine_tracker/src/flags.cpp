@@ -30,7 +30,7 @@ namespace mine_tracker {
                       << ") within radius " << radius_meters << "m (current rtree size: " 
                       << rtree.size() << ")\n";
 
-            auto neighbor_pair = find_first_pair_within(target);
+            auto neighbor_pair = find_closest_pair_within(target);
 
             if (neighbor_pair.second.id == -1) { //no neighbor_pair
                 rtree.insert(std::make_pair(target, FlagMeta{next_id++, -1}));
@@ -88,26 +88,31 @@ namespace mine_tracker {
         }
         //TODO: Update this to search my Radius or region. Not sure if it should be first point
         //TODO: but I am leaving it as it is for now
-        std::pair<GeoPoint, FlagMeta> find_first_pair_within(const GeoPoint& target) const {
-            auto in_radius = bgi::satisfies([&](const FlagValue& val) {
-                return bg::distance(val.first, target) <= radius_meters;
-            });
+        std::pair<GeoPoint, FlagMeta> find_closest_pair_within(const GeoPoint& target) const {
+            const std::pair<GeoPoint, FlagMeta> default_point{GeoPoint(0.0, 0.0), FlagMeta{-1, -1}};
+            auto query = bgi::nearest(target, 1);
+            auto it = rtree.qbegin(query);
 
-            auto it = rtree.qbegin(in_radius);
-            if (it != rtree.qend()) {
-                double dist = bg::distance(it->first, target);
+            if (it == rtree.qend()){
                 //TODO: Change to LOG [DEBUG]
-                std::cout << "[ Flags::find_first_pair_within ] Found candidate flag id=" 
-                          << it->second.id << " (group=" << it->second.group_id 
-                          << ") at distance " << std::fixed << std::setprecision(2) 
-                          << dist << "m\n";
-                return *it;
+                std::cout << "[ Flags::find_closest_pair_within ] No flags within " 
+                        << radius_meters << "m\n";
+                return default_point;
             }
 
+            double dist = bg::distance(it->first, target);
             //TODO: Change to LOG [DEBUG]
-            std::cout << "[ Flags::find_first_pair_within ] No flags within " 
-                      << radius_meters << "m\n";
-            return {GeoPoint(0.0, 0.0), FlagMeta{-1, -1}};
+            if (dist <= radius_meters) {
+                std::cout << "[ Flags::find_first_pair_within ] Found closest candidate flag id=" 
+                << it->second.id << " (group=" << it->second.group_id 
+                << ") at distance " << std::fixed << std::setprecision(2) 
+                << dist << "m\n";
+                return *it;
+            }
+            std::cout << "[ Flags::find_closest_pair_within ] Closest flag is at " 
+                << std::fixed << std::setprecision(2) << dist 
+                << "m (exceeds " << radius_meters << "m radius)\n";
+            return default_point;
         }
     };
 
