@@ -24,12 +24,20 @@ namespace mine_tracker {
 
         int add(double lon, double lat) {
             const GeoPoint target(lon, lat);
+            //TODO: Change to LOG [DEBUG]
+            std::cout << "[ Flags::add ] Checking location (" 
+                      << std::fixed << std::setprecision(6) << lat << ", " << lon 
+                      << ") within radius " << radius_meters << "m (current rtree size: " 
+                      << rtree.size() << ")\n";
 
             auto neighbor_pair = find_first_pair_within(target);
-            //TODO: return opt here?
+
             if (neighbor_pair.second.id == -1) { //no neighbor_pair
                 rtree.insert(std::make_pair(target, FlagMeta{next_id++, -1}));
                 //TODO: store in DB?
+                //TODO: Change to LOG [DEBUG]
+                std::cout << "[ Flags::add ] -> No neighbor within " << radius_meters 
+                          << " with group_id=-1 (unclustered)\n";
                 return -1;
             }
             
@@ -37,14 +45,30 @@ namespace mine_tracker {
 
             if (assigned_group == -1){
                 assigned_group = next_group_id++; //new group is created
-                
+                //TODO: Change to LOG [DEBUG]
+                std::cout << "[ Flags::add ] -> Found solitary neighbor flag id=" << neighbor_pair.second.id 
+                          << " at (" << bg::get<1>(neighbor_pair.first) << ", " << bg::get<0>(neighbor_pair.first)
+                          << "). Promoting it to new group_id=" << assigned_group << "\n";
+
                 // Update the neighbor in R-tree from -1 to assigned_group
                 rtree.remove(neighbor_pair);
                 neighbor_pair.second.group_id = assigned_group;
                 rtree.insert(neighbor_pair);
+                //TODO: Change to LOG [DEBUG]
+                std::cout << "[ Flags::add ] -> Updated neighbor flag id=" << neighbor_pair.second.id 
+                          << " in R-tree to group_id=" << assigned_group << "\n";
+            } else {
+                //TODO: Change to LOG [DEBUG]
+                std::cout << "[ Flags::add ] -> Found existing cluster neighbor flag id=" << neighbor_pair.second.id 
+                          << " already in group_id=" << assigned_group << "\n";
             }
 
-            rtree.insert(std::make_pair(target, FlagMeta{next_id++, assigned_group}));
+            int assigned_id = next_id++;
+            rtree.insert(std::make_pair(target, FlagMeta{assigned_id, assigned_group}));
+            //TODO: Change to LOG [DEBUG]
+            std::cout << "[ Flags::add ] -> Inserted new flag id=" << assigned_id 
+                      << " into group_id=" << assigned_group 
+                      << " (total rtree elements: " << rtree.size() << ")\n";
                 
             return assigned_group;
         }
@@ -56,7 +80,11 @@ namespace mine_tracker {
                 return bg::distance(val.first, target) <= radius_meters;
             });
 
-            return rtree.qbegin(in_radius) != rtree.qend();
+            bool found = (rtree.qbegin(in_radius) != rtree.qend());
+            //TODO: Change to LOG [DEBUG]
+            std::cout << "[ Flags::contains_within ] Query (" << lat << ", " << lon 
+                      << ") -> " << (found ? "YES" : "NO") << "\n";
+            return found;
         }
         //TODO: Update this to search my Radius or region. Not sure if it should be first point
         //TODO: but I am leaving it as it is for now
@@ -67,8 +95,18 @@ namespace mine_tracker {
 
             auto it = rtree.qbegin(in_radius);
             if (it != rtree.qend()) {
+                double dist = bg::distance(it->first, target);
+                //TODO: Change to LOG [DEBUG]
+                std::cout << "[ Flags::find_first_pair_within ] Found candidate flag id=" 
+                          << it->second.id << " (group=" << it->second.group_id 
+                          << ") at distance " << std::fixed << std::setprecision(2) 
+                          << dist << "m\n";
                 return *it;
             }
+
+            //TODO: Change to LOG [DEBUG]
+            std::cout << "[ Flags::find_first_pair_within ] No flags within " 
+                      << radius_meters << "m\n";
             return {GeoPoint(0.0, 0.0), FlagMeta{-1, -1}};
         }
     };

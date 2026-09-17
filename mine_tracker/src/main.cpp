@@ -12,7 +12,7 @@
 #include "flags.hpp"
 #include "safe_queue.hpp"
 
-inline constexpr double FLAG_RADIUS = 5.0; //5m
+inline constexpr double FLAG_RADIUS = 30.0; //30m
 
 std::atomic<bool> g_running{true};
 

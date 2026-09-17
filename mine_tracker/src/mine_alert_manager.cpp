@@ -27,6 +27,11 @@ namespace mine_tracker {
     void MineAlertManager::run(){
         MineAlertData data;
         while (pImpl->alert_queue.pop(data)) {
+            //TODO: Change to LOG [DEBUG]
+                std::cout << "[ MineAlertManager ] Processing ping at (" 
+                    << std::fixed << std::setprecision(6) 
+                    << data.lat() << ", " << data.lon() << ")\n";
+
                 int group_id = pImpl->flags.add_flag(data.lon(), data.lat());
                 if (group_id == -1) {
                     std::cout << "[ MineAlertManager ] Flag added with -1 group. No claster created " << std::endl;
@@ -34,8 +39,28 @@ namespace mine_tracker {
                 }
 
                 auto [it, inserted] = pImpl->groups.try_emplace(group_id, group_id);
+                //TODO: Change to LOG [DEBUG]
+                if (inserted) {
+                    std::cout << "[ MineAlertManager ] -> PROMOTED! Second touch confirmed nearby. Created Group " 
+                        << group_id << " (Baseline prior: 20%)\n";
+                } else {
+                    std::cout << "[ MineAlertManager ] -> Corroborating hit for existing Group " << group_id << "\n";
+                }
 
                 it->second.update_group();
+
+                 //TODO: Change to LOG [DEBUG]
+                std::cout << "[ MineAlertManager ] Group " << group_id 
+                  << " Status | Hits: " << it->second.hit_count()
+                  << " | Confidence: " << std::fixed << std::setprecision(1) 
+                  << (it->second.confidence() * 100.0) << "%\n";
+                
+                //TODO: Change to LOG [DEBUG]
+                if (it->second.confidence() >= 0.80) {
+                    std::cout << "[ ALERT TRIGGERED ] *** MINE CONFIRMED in Group " << group_id 
+                            << " (Confidence: " << (it->second.confidence() * 100.0) << "%) ***\n";
+                    // TODO: send_qgc_danger_circle(...)
+                }
                 // TODO: think about first touch. How to make sure that it's "Clear one". Add time to triggering it?
         }
     }
