@@ -27,16 +27,14 @@ namespace mine_tracker {
     void MineAlertManager::run(){
         MineAlertData data;
         while (pImpl->alert_queue.pop(data)) {
-                // case for a point, that has no pair in range R
                 int group_id = pImpl->flags.add_flag(data.lon(), data.lat());
                 if (group_id == -1) {
                     std::cout << "[ MineAlertManager ] Flag added with -1 group. No claster created " << std::endl;
                     continue;
                 }
-                //case when there is at least 1 point in range R
-                //create and insert new cluste if there were none
+
                 auto [it, inserted] = pImpl->groups.try_emplace(group_id, group_id);
-                //update claster with new point
+
                 it->second.update_group();
                 // TODO: think about first touch. How to make sure that it's "Clear one". Add time to triggering it?
         }

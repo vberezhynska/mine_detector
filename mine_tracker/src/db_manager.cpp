@@ -31,8 +31,8 @@ namespace data {
             const char* schema = R"(
                 CREATE TABLE IF NOT EXISTS detections (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    latitude REAL NOT NULL,
                     longitude REAL NOT NULL,
+                    latitude REAL NOT NULL,
                     mine_group_id INTEGER NOT NULL,
                     detected_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 );
@@ -46,18 +46,18 @@ namespace data {
             }
         }
 
-        void insert(double lat, double lon, int16_t groupId) {
+        void insert(double lon, double lat, int16_t groupId) {
             std::lock_guard<std::mutex> lock(mutex);
 
-            const char* sql = "INSERT INTO detections (latitude, longitude, strength) VALUES (?, ?, ?);";
+            const char* sql = "INSERT INTO detections (longitude, latitude, strength) VALUES (?, ?, ?);";
             sqlite3_stmt* stmt = nullptr;
 
             if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
                 return;
             }
 
-            sqlite3_bind_double(stmt, 1, lat);
             sqlite3_bind_double(stmt, 2, lon);
+            sqlite3_bind_double(stmt, 1, lat);
             sqlite3_bind_double(stmt, 3, groupId);
 
             sqlite3_step(stmt);
@@ -68,15 +68,15 @@ namespace data {
             std::lock_guard<std::mutex> lock(mutex);
             std::vector<MineRecord> records;
 
-            const char* sql = "SELECT id, latitude, longitude, groupId, detected_at FROM detections;";
+            const char* sql = "SELECT id, longitude, latitude, groupId, detected_at FROM detections;";
             sqlite3_stmt* stmt = nullptr;
 
             if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) == SQLITE_OK) {
                 while (sqlite3_step(stmt) == SQLITE_ROW) {
                     MineRecord r;
                     r.id = sqlite3_column_int(stmt, 0);
-                    r.latitude = sqlite3_column_double(stmt, 1);
                     r.longitude = sqlite3_column_double(stmt, 2);
+                    r.latitude = sqlite3_column_double(stmt, 1);
                     r.groupId = sqlite3_column_double(stmt, 3);
                     
                     const unsigned char* ts = sqlite3_column_text(stmt, 4);
@@ -97,8 +97,8 @@ namespace data {
         DbManager::DbManager(DbManager&&) noexcept = default;
         DbManager& DbManager::operator=(DbManager&&) noexcept = default;
 
-        void DbManager::insert_detection(double lat, double lon, int16_t groupId) {
-            pImpl->insert(lat, lon, groupId);
+        void DbManager::insert_detection(double lon, double lat, int16_t groupId) {
+            pImpl->insert(lon, lat, groupId);
         }
 
         std::vector<MineRecord> DbManager::get_all_records() {

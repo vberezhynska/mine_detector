@@ -25,7 +25,7 @@ namespace data {
         DbManager(const DbManager&) = delete;
         DbManager& operator=(const DbManager&) = delete;
 
-        void insert_detection(double lat, double lon, int16_t groupId);
+        void insert_detection(double lon, double lat, int16_t groupId);
         std::vector<MineRecord> get_all_records();
 
     private:
