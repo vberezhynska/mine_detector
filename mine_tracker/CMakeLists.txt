@@ -80,6 +80,7 @@ add_library(tracker
     src/db_manager.cpp
     src/flags.cpp
     src/mine_alert_manager.cpp
+    src/confidence_engine.cpp
 )
 
 # Explicitly declare where your header files live

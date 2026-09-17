@@ -7,6 +7,8 @@ namespace mine_tracker {
     struct FlagMeta {
         int id;
         int group_id;
+
+        bool operator==(const FlagMeta& other) const noexcept = default;
     };
 
     class Flags {
@@ -19,9 +21,8 @@ namespace mine_tracker {
         Flags(const Flags&) = delete;
         Flags& operator=(const Flags&) = delete;
 
-        void add_flag(double lon, double lat);
+        int add_flag(double lon, double lat);
         bool is_within_radius_of_any(double lon, double lat) const;
-        int get_group_in_range(double lon, double lat) const;
 
     private:
         struct Impl;
