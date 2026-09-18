@@ -62,3 +62,6 @@ sudo nmcli connection modify "netplan-wlan0-WirelessNet_2" connection.autoconnec
 
 # Set lower autoconnect priority on AP
 sudo nmcli connection modify "Pi-AP" connection.autoconnect-priority 1
+
+*** Run wiht MavLink variable ***
+MAVLINK_TARGET_IP=192.168.1.222 ./mine_tracker

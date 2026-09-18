@@ -1,4 +1,5 @@
 #include <csignal>
+#include <cstdlib>
 #include <iostream>
 #include <thread>
 #include <atomic>
@@ -40,7 +41,9 @@ int main(int argc, char* argv[]) {
     std::cout << "[DB] Initialized database at: " << db_file << "\n";
 
     // MavLINK
-    auto mavlink_broadcaster = std::make_shared<mine_tracker::MavlinkBroadcaster>("192.168.1.222", 14550);
+    const char* env_ip = std::getenv("MAVLINK_TARGET_IP");
+    std::string broadcast_ip = (env_ip != nullptr) ? env_ip : "10.42.0.255";
+    auto mavlink_broadcaster = std::make_shared<mine_tracker::MavlinkBroadcaster>(broadcast_ip, 14550);
 
     std::thread mavlink_heartbeat_thread([mavlink_broadcaster]() {
         while (g_running.load()) {
