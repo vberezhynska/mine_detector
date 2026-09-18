@@ -5,7 +5,7 @@
 
 namespace mine_tracker {
 
-    inline constexpr double SCALE_FACTOR = 1000000.0;
+    inline constexpr double SCALE_FACTOR = 10000000.0; // 1e7 Mavlink scaling
 
     struct MineAlertData {
         std::string event;

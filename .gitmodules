@@ -1,0 +1,6 @@
+[submodule "mine_tracker/include/external/third_party/mavlink"]
+	path = mine_tracker/include/external/third_party/mavlink
+	url = https://github.com/mavlink/c_library_v2.git
+[submodule "mine_tracker/include/external/mavlink"]
+	path = mine_tracker/include/external/mavlink
+	url = https://github.com/mavlink/c_library_v2.git

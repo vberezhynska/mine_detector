@@ -4,6 +4,8 @@
 #include <iostream>
 #include <variant>
 
+const uint32_t GPS_SCALE_FACTOR = 10000000; //scaling required for MAVLink (deg * 10^7)
+
 namespace mine_tracker {
 
     enum class NMEA_Type : uint8_t {
@@ -23,19 +25,22 @@ namespace mine_tracker {
         }
     }
 
-enum class MessageType : uint8_t {
-    TELEMETRY  = 0x01
-};
+    enum class MessageType : uint8_t {
+        TELEMETRY  = 0x01
+    };
 
-struct __attribute__((__packed__)) TelemetryPayload {
-    uint8_t  msg_type = static_cast<uint8_t>(MessageType::TELEMETRY);
-    uint32_t latitude;   // Scaled integer (e.g. 50451200)
-    uint32_t longitude;  // Scaled integer (e.g. 30523400)
-    uint8_t  gps_type;   // 0 = No Fix, 1 = 2D, 2 = 3D
-    uint32_t timestamp;  // Epoch time or uptime ms
-};
+    struct __attribute__((__packed__)) TelemetryPayload {
+        uint8_t  msg_type = static_cast<uint8_t>(MessageType::TELEMETRY);
+        uint32_t latitude;   // Scaled integer (e.g. 50451200)
+        uint32_t longitude;  // Scaled integer (e.g. 30523400)
+        uint8_t  gps_type;   // 0 = No Fix, 1 = 2D, 2 = 3D
+        uint32_t timestamp;  // Epoch time or uptime ms
+    };
 
-using UdpPacket = std::variant<std::monostate, TelemetryPayload>;
+    using UdpPacket = std::variant<std::monostate, TelemetryPayload>;
 
+    [[nodiscard]] constexpr double to_gps(int32_t lat_long) noexcept {
+        return static_cast<double>(lat_long) / GPS_SCALE_FACTOR;
+    }
 
 } // namespace mine_tracker
