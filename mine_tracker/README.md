@@ -23,7 +23,7 @@ sudo make install
 *** On clean R Pi ***
 ping vabe-pi.local
 sudo apt update
-sudo apt install -y build-essential cmake libasio-dev nlohmann-json3-dev git
+sudo apt install -y build-essential cmake
 
 *** Copy solution to Pi ***
 In Ubuntu:

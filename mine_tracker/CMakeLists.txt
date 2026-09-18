@@ -63,7 +63,7 @@ FetchContent_Declare(
 FetchContent_GetProperties(boost_source)
 if(NOT boost_source_POPULATED)
     message(STATUS "Fetching Boost source headers (may take a minute on initial setup)...")
-    FetchContent_Populate(boost_source)
+    FetchContent_MakeAvailable(boost_source)
 endif()
 
 # Create an interface target for header-only Boost usage
@@ -109,3 +109,5 @@ target_compile_definitions(mine_tracker PRIVATE
 
 # Link tracker library to the executable
 target_link_libraries(mine_tracker PRIVATE tracker)
+
+target_compile_options(mine_tracker PRIVATE -Wno-psabi)
