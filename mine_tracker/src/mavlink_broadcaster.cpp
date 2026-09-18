@@ -84,22 +84,29 @@ namespace mine_tracker {
                 system_id_,
                 component_id_,
                 &msg,
-                boot_ms * 1000ULL, // time_usec
-                GPS_FIX_TYPE_3D_FIX, // fix_type: 3 = 3D fix
+                boot_ms * 1000ULL,    // time_usec
+                GPS_FIX_TYPE_3D_FIX,  // fix_type: 3 = 3D fix
                 lat_e7,
                 lon_e7,
                 alt_mm,
-                UINT16_MAX,        // eph (HDOP, unknown)
-                UINT16_MAX,        // epv (VDOP, unknown)
-                0,                 // vel (groundspeed cm/s)
-                hdg_cdeg,          // cog (course over ground)
-                10                 // satellites_visible (e.g. 10 sats)
+                UINT16_MAX,           // eph (HDOP, UINT16_MAX = unknown)
+                UINT16_MAX,           // epv (VDOP, UINT16_MAX = unknown)
+                0,                    // vel (groundspeed cm/s)
+                static_cast<uint16_t>(hdg_cdeg), // cog (course over ground, cdeg)
+                10,                   // satellites_visible
+                alt_mm,               // alt_ellipsoid (mm)
+                0,                    // h_acc (horizontal accuracy mm, 0 = unknown)
+                0,                    // v_acc (vertical accuracy mm, 0 = unknown)
+                0,                    // vel_acc (speed accuracy mm/s, 0 = unknown)
+                0,                    // hdg_acc (heading accuracy degE5, 0 = unknown)
+                static_cast<uint16_t>(hdg_cdeg)  // yaw (heading cdeg)
             );
 
             uint16_t len = mavlink_msg_to_send_buffer(buffer, &msg);
-
-            std::lock_guard<std::mutex> lock(send_mutex);
-            sendto(sock_fd_, buffer, len, 0, reinterpret_cast<struct sockaddr*>(&dest_addr), sizeof(dest_addr));
+            {
+                std::lock_guard<std::mutex> lock(send_mutex);
+                sendto(sock_fd_, buffer, len, 0, reinterpret_cast<struct sockaddr*>(&dest_addr), sizeof(dest_addr));
+            }
 
             //(Places the vehicle pin on the map)
             mavlink_msg_global_position_int_pack(
@@ -117,8 +124,8 @@ namespace mine_tracker {
 
             len = mavlink_msg_to_send_buffer(buffer, &msg);
             {
-                std::lock_guard<std::mutex> lock(send_mutex_);
-                sendto(sock_fd_, buffer, len, 0, reinterpret_cast<struct sockaddr*>(&dest_addr_), sizeof(dest_addr_));
+                std::lock_guard<std::mutex> lock(send_mutex);
+                sendto(sock_fd_, buffer, len, 0, reinterpret_cast<struct sockaddr*>(&dest_addr), sizeof(dest_addr));
             }
         }
     };
