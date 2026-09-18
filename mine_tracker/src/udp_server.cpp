@@ -27,12 +27,13 @@ namespace mine_tracker {
     }
 
     void UdpServer::stop(){
+        pImpl->is_running = false;
+
         if (pImpl->socket_fd >= 0){
+            ::shutdown(pImpl->socket_fd, SHUT_RDWR); //forse unlock any thread
             ::close(pImpl->socket_fd);
             pImpl->socket_fd = -1;
         }
-
-        pImpl->is_running = false;
     }
 
     bool UdpServer::start(){

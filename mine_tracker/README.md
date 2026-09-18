@@ -10,7 +10,7 @@ curl.exe -i -X GET http://192.168.1.199:8080/v1/api/status
 POST:
 POST http://10.42.0.1:8080/v1/api/alerts
 POST http://192.168.1.199:8080/v1/api/alerts
-{"event": "MINE_FOUND", "lat": 50451200, "lon": 30523400}
+{"event": "MINE_FOUND", "lat_int": 50451200, "lon_int": 30523400, "gpType": 2}
 
 
 # Clone Crow repository
@@ -23,7 +23,7 @@ sudo make install
 *** On clean R Pi ***
 ping vabe-pi.local
 sudo apt update
-sudo apt install -y build-essential cmake libasio-dev nlohmann-json3-dev git
+sudo apt install -y build-essential cmake
 
 *** Copy solution to Pi ***
 In Ubuntu:
