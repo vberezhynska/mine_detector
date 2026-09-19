@@ -17,9 +17,24 @@ POST http://192.168.1.199:8080/v1/api/alerts
 {
   "event": "detection",
   "lat_int": 504512000,
-  "lon_int": 305304620,
+  "lon_int": 305219874,
   "gpType": 2
 }
+
+{
+  "event": "detection",
+  "lat_int": 504512000,
+  "lon_int": 305262247,
+  "gpType": 2
+}
+
+{
+  "event": "detection",
+  "lat_int": 504512000,
+  "lon_int": 305299874,
+  "gpType": 2
+}
+
 
 
 # Clone Crow repository
