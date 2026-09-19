@@ -5,6 +5,8 @@
 #include <string>
 
 namespace mine_tracker {
+    class GroupConfidence;
+    
     class MavlinkBroadcaster {
     public:
         explicit MavlinkBroadcaster(const std::string& broadcast_ip = "192.168.4.255", uint16_t port = 14550);
@@ -17,7 +19,9 @@ namespace mine_tracker {
 
         void send_heartbeat();
         void send_gps_position(int32_t lat_e7, int32_t lon_e7, int32_t alt_mm = 0, uint16_t hdg_cdeg = 0);
-    private:
+        void send_danger_zone(double radius_m, int32_t lat_e7, int32_t lon_e7, const mine_tracker::GroupConfidence& confidence_group);
+    
+        private:
         struct Impl;
         std::unique_ptr<Impl> pImpl;
     };

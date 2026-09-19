@@ -85,7 +85,7 @@ int main(int argc, char* argv[]) {
     //TODO: move radius to configuration
     // Alert manager worker
     mine_tracker::Flags flags(FLAG_RADIUS);
-    mine_tracker::MineAlertManager alert_manager(alert_queue, flags);
+    mine_tracker::MineAlertManager alert_manager(alert_queue, flags, mavlink_broadcaster);
     std::jthread alert_worker(&mine_tracker::MineAlertManager::run, &alert_manager);
 
     // HTTP SERVER
@@ -113,6 +113,7 @@ int main(int argc, char* argv[]) {
 
     // Graceful Shutdown
     std::cout << "[MAIN] Initiating graceful shutdown..." << std::endl;
+    g_running.store(false);
     alert_queue.stop();
 
     udp_server.stop();

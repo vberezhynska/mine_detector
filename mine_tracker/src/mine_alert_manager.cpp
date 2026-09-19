@@ -8,20 +8,39 @@
 #include "dto/struct_library.hpp"
 #include "safe_queue.hpp"
 #include "confidence_engine.hpp"
+#include "mavlink_broadcaster.hpp"
 
 namespace mine_tracker {
     struct MineAlertManager::Impl {
         SafeQueue<mine_tracker::MineAlertData>& alert_queue;
         Flags& flags;
+        std::shared_ptr<mine_tracker::MavlinkBroadcaster> mavlink;
         std::unordered_map<int, GroupConfidence> groups;
 
-        explicit Impl(SafeQueue<mine_tracker::MineAlertData>& alert_queue, Flags& flags)
-         : alert_queue(alert_queue), flags(flags){};
+        explicit Impl(
+            SafeQueue<mine_tracker::MineAlertData>& alert_queue, 
+            Flags& flags,
+            const std::shared_ptr<mine_tracker::MavlinkBroadcaster>& mavlink)
+         : alert_queue(alert_queue), flags(flags), mavlink(mavlink){};
         ~Impl() = default;
+
+        void send_mavlink_alert(double radius_m, int32_t lat_e7, int32_t lon_e7, const GroupConfidence& group_confidence){
+            if (mavlink){
+                mavlink->send_danger_zone(radius_m, lat_e7, lon_e7, group_confidence);
+                std::cout << "[INFO] MavLink send circle details." << std::endl;
+                return;
+            }
+
+            //TODO: change with LOGS
+            std::cout << "[ERROR] MavLink prt is null." << std::endl;
+        }
     };
     
-    MineAlertManager::MineAlertManager(SafeQueue<mine_tracker::MineAlertData>& alert_queue, Flags& flags) 
-        : pImpl(std::make_unique<Impl>(alert_queue, flags)) {}
+    MineAlertManager::MineAlertManager(
+            SafeQueue<mine_tracker::MineAlertData>& alert_queue, 
+            Flags& flags, 
+            const std::shared_ptr<mine_tracker::MavlinkBroadcaster>& mavlink) 
+        : pImpl(std::make_unique<Impl>(alert_queue, flags, mavlink)) {}
     MineAlertManager::~MineAlertManager() = default;
 
     void MineAlertManager::run(){
@@ -59,7 +78,8 @@ namespace mine_tracker {
                 if (it->second.confidence() >= 0.80) {
                     std::cout << "[ ALERT TRIGGERED ] *** MINE CONFIRMED in Group " << group_id 
                             << " (Confidence: " << (it->second.confidence() * 100.0) << "%) ***\n";
-                    // TODO: send_qgc_danger_circle(...)
+                    
+                    pImpl->send_mavlink_alert(30.0, data.lat_int, data.lon_int, it->second);
                 }
                 // TODO: think about first touch. How to make sure that it's "Clear one". Add time to triggering it?
         }

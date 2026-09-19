@@ -1,6 +1,8 @@
 Testing UDP SERVER from PowerShell:
 $u = [System.Net.Sockets.UdpClient]::new(); $b = [byte[]](0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00); [System.BitConverter]::GetBytes([uint32]504512000).CopyTo($b, 1); [System.BitConverter]::GetBytes([uint32]305234000).CopyTo($b, 5); $b[9] = [byte]2; [System.BitConverter]::GetBytes([uint32]1700000000).CopyTo($b, 10); $u.Send($b, $b.Length, "vabe-pi", 5005); $u.Close()
 
+$u = [System.Net.Sockets.UdpClient]::new(); $b = [byte[]](0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00); [System.BitConverter]::GetBytes([uint32]504512000).CopyTo($b, 1); [System.BitConverter]::GetBytes([uint32]305234000).CopyTo($b, 5); $b[9] = [byte]2; [System.BitConverter]::GetBytes([uint32]1700000000).CopyTo($b, 10); $u.Send($b, $b.Length, "192.168.1.199", 5005); $u.Close()
+
 Testing HTTP SERVER from PowerShell:
 GET:
 curl.exe -i -X GET http://10.42.0.1:8080/v1/api/status
@@ -64,4 +66,5 @@ sudo nmcli connection modify "netplan-wlan0-WirelessNet_2" connection.autoconnec
 sudo nmcli connection modify "Pi-AP" connection.autoconnect-priority 1
 
 *** Run wiht MavLink variable ***
+Run from Local:
 MAVLINK_TARGET_IP=192.168.1.222 ./mine_tracker
