@@ -24,8 +24,6 @@ namespace mine_tracker {
             // Register a callback to process incoming alerts
             bool set_alert_callback(AlertCallback callback, 
                                         std::chrono::milliseconds timeout = std::chrono::milliseconds(100));
-            bool set_status_callback(StatusCallback callback, 
-                                        std::chrono::milliseconds timeout = std::chrono::milliseconds(100));
 
             bool init(uint16_t port = 8080);
             void start();

@@ -5,56 +5,106 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include <unordered_map>
 #include <chrono>
 #include <cstdint>
 #include <cstring>
-#include <iostream>
+#include <format>
 #include <mutex>
+#include <vector>
+
+#include "confidence_engine.hpp"
+#include "external/debug_macros.hpp"
 
 namespace mine_tracker {
+    struct MineMarker {
+        uint32_t icao_id;   // Unique 24-bit ICAO address for each mine
+        uint16_t group_id;
+        int32_t lat_e7;
+        int32_t lon_e7;
+    };
+    
     struct MavlinkBroadcaster::Impl {
-        int sock_fd_{-1};
+        int sock_fd{-1};
         struct sockaddr_in dest_addr{};
-        uint8_t system_id_{1};
-        uint8_t component_id_{MAV_COMP_ID_AUTOPILOT1};
+        uint8_t system_id{1};
+        uint8_t component_id{MAV_COMP_ID_AUTOPILOT1};
         std::chrono::steady_clock::time_point start_time;
         std::mutex send_mutex;
 
+        std::mutex mines_mutex;
+        std::unordered_map<uint16_t, MineMarker> active_mines;
+
         Impl(const std::string& broadcast_ip, uint16_t port) {
-            sock_fd_ = socket(AF_INET, SOCK_DGRAM, 0);
-            if (sock_fd_ < 0) {
-                std::cerr << "[MAVLink] Failed to create socket\n";
+            sock_fd = socket(AF_INET, SOCK_DGRAM, 0);
+            if (sock_fd < 0) {
+                LOG("[MAVLink] [ERROR] Failed to create socket");
                 return;
             }
 
             int broadcast_enable = 1;
-            if (setsockopt(sock_fd_, SOL_SOCKET, SO_BROADCAST, &broadcast_enable, sizeof(broadcast_enable)) < 0) {
-                std::cerr << "[MAVLink] Failed to set SO_BROADCAST\n";
+            if (setsockopt(sock_fd, SOL_SOCKET, SO_BROADCAST, &broadcast_enable, sizeof(broadcast_enable)) < 0) {
+                LOG("[MAVLink] [ERROR] Failed to set SO_BROADCAST");
             }
 
             std::memset(&dest_addr, 0, sizeof(dest_addr));
             dest_addr.sin_family = AF_INET;
             dest_addr.sin_port = htons(port);
-            inet_pton(AF_INET, broadcast_ip.c_str(), &dest_addr.sin_addr);
+
+            if (inet_pton(AF_INET, broadcast_ip.c_str(), &dest_addr.sin_addr) <= 0) {
+                LOG(std::format("[MAVLink] [ERROR] Invalid broadcast IP address: {}", broadcast_ip));
+            }
 
             start_time = std::chrono::steady_clock::now();
         }
 
         ~Impl() {
-            if (sock_fd_ >= 0) {
-                close(sock_fd_);
+            if (sock_fd >= 0) {
+                close(sock_fd);
+            }
+        }
+
+        void send_mine_point(const MineMarker& mine, uint8_t* buffer, mavlink_message_t& msg) {
+            char callsign[9] = {0};
+            // Callsign appears as a text label next to the pin in QGC/Mission Planner
+            std::snprintf(callsign, sizeof(callsign), "Mine_%03u", mine.group_id);
+
+            mavlink_msg_adsb_vehicle_pack(
+                system_id,
+                component_id,
+                &msg,
+                mine.icao_id,                       // ICAO address (e.g. 0xA000 + group_id)
+                mine.lat_e7,                        // Latitude (degE7)
+                mine.lon_e7,                        // Longitude (degE7)
+                ADSB_ALTITUDE_TYPE_GEOMETRIC,
+                0,                                  // Altitude (mm)
+                0,                                  // Heading (cdeg)
+                0,                                  // Horizontal velocity (cm/s)
+                0,                                  // Vertical velocity (cm/s)
+                callsign,                           // Callsign / Label (max 8 chars + null terminator)
+                ADSB_EMITTER_TYPE_EMERGENCY_SURFACE,
+                1,                                  // tslc: 1 sec since last communication (fresh)
+                ADSB_FLAGS_VALID_COORDS | ADSB_FLAGS_VALID_ALTITUDE | ADSB_FLAGS_VALID_CALLSIGN,
+                7700                                // Squawk
+            );
+
+            uint16_t len = mavlink_msg_to_send_buffer(buffer, &msg);
+            {
+                std::lock_guard<std::mutex> lock(send_mutex);
+                sendto(sock_fd, buffer, len, 0, reinterpret_cast<struct sockaddr*>(&dest_addr), sizeof(dest_addr));
             }
         }
 
         void send_heartbeat() {
-            if (sock_fd_ < 0) return;
+            if (sock_fd < 0) return;
 
             mavlink_message_t msg;
             uint8_t buffer[MAVLINK_MAX_PACKET_LEN];
 
+            // 1. Primary Vehicle Heartbeat (SysID = 1, Rover)
             mavlink_msg_heartbeat_pack(
-                system_id_,
-                component_id_,
+                system_id,
+                component_id,
                 &msg,
                 MAV_TYPE_GROUND_ROVER,
                 MAV_AUTOPILOT_GENERIC,
@@ -64,12 +114,29 @@ namespace mine_tracker {
             );
 
             uint16_t len = mavlink_msg_to_send_buffer(buffer, &msg);
-            std::lock_guard<std::mutex> lock(send_mutex);
-            sendto(sock_fd_, buffer, len, 0, reinterpret_cast<struct sockaddr*>(&dest_addr), sizeof(dest_addr));
+            {
+                std::lock_guard<std::mutex> lock(send_mutex);
+                sendto(sock_fd, buffer, len, 0, reinterpret_cast<struct sockaddr*>(&dest_addr), sizeof(dest_addr));
+            }
+
+            // 2. Snapshot all registered mines
+            std::vector<MineMarker> markers_to_refresh;
+            {
+                std::lock_guard<std::mutex> lock(mines_mutex);
+                markers_to_refresh.reserve(active_mines.size());
+                for (const auto& [_, marker] : active_mines) {
+                    markers_to_refresh.push_back(marker);
+                }
+            }
+
+            // 3. Broadcast ADSB_VEHICLE for every active mine (refreshes watchdog timer)
+            for (const auto& mine : markers_to_refresh) {
+                send_mine_point(mine, buffer, msg);
+            }
         }
 
-        void send_gps_position(int32_t lat_e7, int32_t lon_e7, int32_t alt_mm, int16_t hdg_cdeg) {
-        if (sock_fd_ < 0) return;
+        void send_gps_position(int32_t lat_e7, int32_t lon_e7, int32_t alt_mm, uint16_t hdg_cdeg) {
+            if (sock_fd < 0) return;
 
             mavlink_message_t msg;
             uint8_t buffer[MAVLINK_MAX_PACKET_LEN];
@@ -81,37 +148,37 @@ namespace mine_tracker {
             );
 
             mavlink_msg_gps_raw_int_pack(
-                system_id_,
-                component_id_,
+                system_id,
+                component_id,
                 &msg,
-                boot_ms * 1000ULL,    // time_usec
-                GPS_FIX_TYPE_3D_FIX,  // fix_type: 3 = 3D fix
+                boot_ms * 1000ULL,               // time_usec
+                GPS_FIX_TYPE_3D_FIX,             // fix_type: 3 = 3D fix
                 lat_e7,
                 lon_e7,
                 alt_mm,
-                UINT16_MAX,           // eph (HDOP, UINT16_MAX = unknown)
-                UINT16_MAX,           // epv (VDOP, UINT16_MAX = unknown)
-                0,                    // vel (groundspeed cm/s)
+                UINT16_MAX,                      // eph (HDOP, UINT16_MAX = unknown)
+                UINT16_MAX,                      // epv (VDOP, UINT16_MAX = unknown)
+                0,                               // vel (groundspeed cm/s)
                 static_cast<uint16_t>(hdg_cdeg), // cog (course over ground, cdeg)
-                10,                   // satellites_visible
-                alt_mm,               // alt_ellipsoid (mm)
-                0,                    // h_acc (horizontal accuracy mm, 0 = unknown)
-                0,                    // v_acc (vertical accuracy mm, 0 = unknown)
-                0,                    // vel_acc (speed accuracy mm/s, 0 = unknown)
-                0,                    // hdg_acc (heading accuracy degE5, 0 = unknown)
+                10,                              // satellites_visible
+                alt_mm,                          // alt_ellipsoid (mm)
+                0,                               // h_acc (horizontal accuracy mm, 0 = unknown)
+                0,                               // v_acc (vertical accuracy mm, 0 = unknown)
+                0,                               // vel_acc (speed accuracy mm/s, 0 = unknown)
+                0,                               // hdg_acc (heading accuracy degE5, 0 = unknown)
                 static_cast<uint16_t>(hdg_cdeg)  // yaw (heading cdeg)
             );
 
             uint16_t len = mavlink_msg_to_send_buffer(buffer, &msg);
             {
                 std::lock_guard<std::mutex> lock(send_mutex);
-                sendto(sock_fd_, buffer, len, 0, reinterpret_cast<struct sockaddr*>(&dest_addr), sizeof(dest_addr));
+                sendto(sock_fd, buffer, len, 0, reinterpret_cast<struct sockaddr*>(&dest_addr), sizeof(dest_addr));
             }
 
-            //(Places the vehicle pin on the map)
+            // Places the vehicle pin on the map
             mavlink_msg_global_position_int_pack(
-                system_id_,
-                component_id_,
+                system_id,
+                component_id,
                 &msg,
                 boot_ms,
                 lat_e7,
@@ -125,7 +192,50 @@ namespace mine_tracker {
             len = mavlink_msg_to_send_buffer(buffer, &msg);
             {
                 std::lock_guard<std::mutex> lock(send_mutex);
-                sendto(sock_fd_, buffer, len, 0, reinterpret_cast<struct sockaddr*>(&dest_addr), sizeof(dest_addr));
+                sendto(sock_fd, buffer, len, 0, reinterpret_cast<struct sockaddr*>(&dest_addr), sizeof(dest_addr));
+            }
+        }
+
+        // Send STATUSTEXT notification to QGC and add mine to active_mines map
+        void send_danger_zone(int32_t lat_e7, int32_t lon_e7, float confidence, uint16_t group_id) {
+            if (sock_fd < 0) {
+                LOG("[MAVLink] [WARNING] sock_fd is less than 0.");
+                return;
+            }
+
+            // Assign a deterministic unique ICAO address (range 0xA000 + group_id)
+            uint32_t icao = 0xA000 + (group_id % 1000);
+            MineMarker marker{icao, group_id, lat_e7, lon_e7};
+
+            {
+                std::lock_guard<std::mutex> lock(mines_mutex);
+                active_mines[group_id] = marker;
+            }
+
+            mavlink_message_t msg;
+            uint8_t buffer[MAVLINK_MAX_PACKET_LEN];
+
+            // Send immediate ADSB_VEHICLE packet using local marker
+            send_mine_point(marker, buffer, msg);
+
+            // Send critical STATUSTEXT banner
+            char text[50] = {0};
+            std::snprintf(text, sizeof(text), "[ALERT] Mine with group_id #%u confirmed! Conf: %.0f%%", group_id, confidence * 100.0f);
+
+            mavlink_msg_statustext_pack(
+                system_id,
+                component_id,
+                &msg,
+                MAV_SEVERITY_CRITICAL,
+                text,
+                0,
+                0
+            );
+
+            uint16_t len = mavlink_msg_to_send_buffer(buffer, &msg);
+            {
+                std::lock_guard<std::mutex> lock(send_mutex);
+                sendto(sock_fd, buffer, len, 0, reinterpret_cast<struct sockaddr*>(&dest_addr), sizeof(dest_addr));
             }
         }
     };
@@ -135,7 +245,6 @@ namespace mine_tracker {
     MavlinkBroadcaster::MavlinkBroadcaster(const std::string& broadcast_ip, uint16_t port)
         : pImpl(std::make_unique<Impl>(broadcast_ip, port)) {}
 
-    // Must be defined in the .cpp file so unique_ptr knows the complete type of Impl
     MavlinkBroadcaster::~MavlinkBroadcaster() = default;
 
     MavlinkBroadcaster::MavlinkBroadcaster(MavlinkBroadcaster&&) noexcept = default;
@@ -148,4 +257,8 @@ namespace mine_tracker {
     void MavlinkBroadcaster::send_gps_position(int32_t lat_e7, int32_t lon_e7, int32_t alt_mm, uint16_t hdg_cdeg) {
         pImpl->send_gps_position(lat_e7, lon_e7, alt_mm, hdg_cdeg);
     }
-} //namespace mine_tracker
+
+    void MavlinkBroadcaster::send_danger_zone(int32_t lat_e7, int32_t lon_e7, const GroupConfidence& group_confidence) {
+        pImpl->send_danger_zone(lat_e7, lon_e7, group_confidence.confidence(), group_confidence.group_id);
+    }
+} // namespace mine_tracker

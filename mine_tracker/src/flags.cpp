@@ -1,9 +1,18 @@
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic ignored "-Wpsabi"
+#endif
+
 #include "flags.hpp"
 
 #include <utility>
+#include <unordered_map>
 #include <boost/geometry.hpp>
 #include <boost/geometry/geometries/point.hpp>
 #include <boost/geometry/index/rtree.hpp>
+#include <format>
+#include <string>
+
+#include "external/debug_macros.hpp"
 
 namespace bg = boost::geometry;
 namespace bgi = boost::geometry::index;
@@ -12,64 +21,97 @@ namespace mine_tracker {
     using GeoPoint = bg::model::point<double, 2, bg::cs::geographic<bg::degree>>;
     using FlagValue = std::pair<GeoPoint, FlagMeta>;
 
-    
+    struct GroupRecord {
+        int group_id;
+        double lon;
+        double lat;
+        int hit_count{0};
+
+        void add_point(double p_lon, double p_lat) {
+            lon = (lon * hit_count + p_lon) / (hit_count + 1);
+            lat = (lat * hit_count + p_lat) / (hit_count + 1);
+            hit_count++;
+        }
+    };
+
     struct Flags::Impl {
         bgi::rtree<FlagValue, bgi::rstar<16>> rtree;
+        std::unordered_map<int, GroupRecord> groups; // Tracks centroid and hits per group
         const double radius_meters;
         int next_id {0}; 
-        int next_group_id {0}; //TODO: sync with id in DB
+        int next_group_id {0};
 
-        explicit Impl(double radius_meters) : radius_meters(radius_meters){};
+        explicit Impl(double radius_meters) : radius_meters(radius_meters) {}
         ~Impl() = default;
 
         int add(double lon, double lat) {
-            const GeoPoint target(lon, lat);
-            //TODO: Change to LOG [DEBUG]
-            std::cout << "[ Flags::add ] Checking location (" 
-                      << std::fixed << std::setprecision(6) << lat << ", " << lon 
-                      << ") within radius " << radius_meters << "m (current rtree size: " 
-                      << rtree.size() << ")\n";
+            if (lon < 0.01 || lat < 0.01) {
+                DEBUG(std::format("[ERROR] Alert request has default GPS coordinates ({:.6f}, {:.6f}). GPS point will be skipped.", lat, lon));
+                return -1;
+            }
 
+            const GeoPoint target(lon, lat);
             auto neighbor_pair = find_closest_pair_within(target);
 
-            if (neighbor_pair.second.id == -1) { //no neighbor_pair
-                rtree.insert(std::make_pair(target, FlagMeta{next_id++, -1}));
+            // Case: No neighbor or cluster within radius -> Store as unclustered solitary flag
+            if (neighbor_pair.second.id == -1) {
+                int assigned_id = next_id++;
+                rtree.insert(std::make_pair(target, FlagMeta{assigned_id, -1}));
                 //TODO: store in DB?
-                //TODO: Change to LOG [DEBUG]
-                std::cout << "[ Flags::add ] -> No neighbor within " << radius_meters 
-                          << " with group_id=-1 (unclustered)\n";
+                DEBUG(std::format(
+                    "[ Flags::add ] -> No neighbor within {}m. Inserted solitary candidate id={}",
+                    radius_meters, assigned_id
+                ));
                 return -1;
             }
             
             int assigned_group = neighbor_pair.second.group_id;
 
-            if (assigned_group == -1){
-                assigned_group = next_group_id++; //new group is created
-                //TODO: Change to LOG [DEBUG]
-                std::cout << "[ Flags::add ] -> Found solitary neighbor flag id=" << neighbor_pair.second.id 
-                          << " at (" << bg::get<1>(neighbor_pair.first) << ", " << bg::get<0>(neighbor_pair.first)
-                          << "). Promoting it to new group_id=" << assigned_group << "\n";
+            //Case: Create group with first point and incert centroid into the R-tree
+            if (assigned_group == -1) {
+                assigned_group = next_group_id++;
 
-                // Update the neighbor in R-tree from -1 to assigned_group
+                LOG(std::format(
+                    "[ Flags::add ] -> Found solitary neighbor flag id={} at ({:.6f}, {:.6f}). Promoting to group_id={}",
+                    neighbor_pair.second.id,
+                    bg::get<1>(neighbor_pair.first),
+                    bg::get<0>(neighbor_pair.first),
+                    assigned_group
+                ));
+
                 rtree.remove(neighbor_pair);
-                neighbor_pair.second.group_id = assigned_group;
-                rtree.insert(neighbor_pair);
-                //TODO: Change to LOG [DEBUG]
-                std::cout << "[ Flags::add ] -> Updated neighbor flag id=" << neighbor_pair.second.id 
-                          << " in R-tree to group_id=" << assigned_group << "\n";
-            } else {
-                //TODO: Change to LOG [DEBUG]
-                std::cout << "[ Flags::add ] -> Found existing cluster neighbor flag id=" << neighbor_pair.second.id 
-                          << " already in group_id=" << assigned_group << "\n";
+
+                GroupRecord gr{assigned_group, bg::get<0>(neighbor_pair.first), bg::get<1>(neighbor_pair.first), 1};
+                gr.add_point(lon, lat);
+                groups[assigned_group] = gr;
+
+                GeoPoint centroid(gr.lon, gr.lat);
+                rtree.insert(std::make_pair(centroid, FlagMeta{assigned_group, assigned_group}));
+
+                LOG(std::format(
+                    "[ Flags::add ] -> Created Group {} centered at ({:.6f}, {:.6f}) with 2 hits",
+                    assigned_group, gr.lat, gr.lon
+                ));
+            } 
+            // Case: Matched an existing group centroid -> Corroborate hit & update centroid
+            else {
+                LOG(std::format(
+                    "[ Flags::add ] -> Matched existing group_id={}. Updating centroid and hits.",
+                    assigned_group
+                ));
+                // Re-insert updated centroid into R-tree
+                auto& gr = groups[assigned_group];
+                rtree.remove(neighbor_pair);
+                gr.add_point(lon, lat);
+                GeoPoint new_centroid(gr.lon, gr.lat);
+                rtree.insert(std::make_pair(new_centroid, FlagMeta{assigned_group, assigned_group}));
+
+                LOG(std::format(
+                    "[ Flags::add ] -> Group {} centroid shifted to ({:.6f}, {:.6f}) (Total hits: {})",
+                    assigned_group, gr.lat, gr.lon, gr.hit_count
+                ));
             }
 
-            int assigned_id = next_id++;
-            rtree.insert(std::make_pair(target, FlagMeta{assigned_id, assigned_group}));
-            //TODO: Change to LOG [DEBUG]
-            std::cout << "[ Flags::add ] -> Inserted new flag id=" << assigned_id 
-                      << " into group_id=" << assigned_group 
-                      << " (total rtree elements: " << rtree.size() << ")\n";
-                
             return assigned_group;
         }
 
@@ -81,48 +123,53 @@ namespace mine_tracker {
             });
 
             bool found = (rtree.qbegin(in_radius) != rtree.qend());
-            //TODO: Change to LOG [DEBUG]
-            std::cout << "[ Flags::contains_within ] Query (" << lat << ", " << lon 
-                      << ") -> " << (found ? "YES" : "NO") << "\n";
+
+            DEBUG(std::format(
+                "[ Flags::contains_within ] Query ({:.6f}, {:.6f}) -> {}",
+                lat, lon, (found ? "YES" : "NO")
+            ));
             return found;
         }
-        //TODO: Update this to search my Radius or region. Not sure if it should be first point
-        //TODO: but I am leaving it as it is for now
+
         std::pair<GeoPoint, FlagMeta> find_closest_pair_within(const GeoPoint& target) const {
             const std::pair<GeoPoint, FlagMeta> default_point{GeoPoint(0.0, 0.0), FlagMeta{-1, -1}};
             auto query = bgi::nearest(target, 1);
             auto it = rtree.qbegin(query);
 
-            if (it == rtree.qend()){
-                //TODO: Change to LOG [DEBUG]
-                std::cout << "[ Flags::find_closest_pair_within ] No flags within " 
-                        << radius_meters << "m\n";
+            if (it == rtree.qend()) {
+                DEBUG(std::format(
+                    "[ Flags::find_closest_pair_within ] No flags within {}m",
+                    radius_meters
+                ));
                 return default_point;
             }
 
             double dist = bg::distance(it->first, target);
-            //TODO: Change to LOG [DEBUG]
+
             if (dist <= radius_meters) {
-                std::cout << "[ Flags::find_first_pair_within ] Found closest candidate flag id=" 
-                << it->second.id << " (group=" << it->second.group_id 
-                << ") at distance " << std::fixed << std::setprecision(2) 
-                << dist << "m\n";
+                DEBUG(std::format(
+                    "[ Flags::find_closest_pair_within ] Found closest entry id={} (group={}) at distance {:.2f}m",
+                    it->second.id,
+                    it->second.group_id,
+                    dist
+                ));
                 return *it;
             }
-            std::cout << "[ Flags::find_closest_pair_within ] Closest flag is at " 
-                << std::fixed << std::setprecision(2) << dist 
-                << "m (exceeds " << radius_meters << "m radius)\n";
+
+            DEBUG(std::format(
+                "[ Flags::find_closest_pair_within ] Closest entry is at {:.2f}m (exceeds {}m radius)",
+                dist,
+                radius_meters
+            ));
             return default_point;
         }
     };
 
-    //TODO: add DB handling here
     Flags::Flags(double radius_meters) : pImpl(std::make_unique<Impl>(radius_meters)) {}
     Flags::~Flags() = default;
     Flags::Flags(Flags&&) noexcept = default;
     Flags& Flags::operator=(Flags&&) noexcept = default;
 
-    // Public forwarding methods
     int Flags::add_flag(double lon, double lat) {
         return pImpl->add(lon, lat);
     }
@@ -131,4 +178,4 @@ namespace mine_tracker {
         return pImpl->contains_within(lon, lat);
     }
 
-} //namespace mine_tracker
+} // namespace mine_tracker
