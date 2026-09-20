@@ -2,8 +2,10 @@
 
 #include <charconv>
 #include <cstring>
-#include <iostream>
+#include <format>
 #include <string_view>
+
+#include "external/debug_macros.hpp"
 
 namespace mine_tracker {
 
@@ -36,13 +38,13 @@ double parse_flag_radius(int argc, char* argv[], double default_radius) {
             if (i + 1 < argc) {
                 std::string_view val_str(argv[++i]);
                 if (!parse_double_positive(val_str, radius)) {
-                    std::cerr << "Warning: Invalid --radius value '" << val_str 
-                              << "'. Falling back to " << default_radius << " m\n";
+                    LOG(std::format("Warning: Invalid --radius value '{}'. Falling back to {} m", 
+                                   val_str, default_radius));
                     radius = default_radius;
                 }
             } else {
-                std::cerr << "Warning: --radius passed without a value. Using " 
-                          << default_radius << " m\n";
+                LOG(std::format("Warning: --radius passed without a value. Using {} m", 
+                               default_radius));
             }
             break;
         }
@@ -52,15 +54,15 @@ double parse_flag_radius(int argc, char* argv[], double default_radius) {
         if (arg.starts_with(prefix)) {
             std::string_view val_str = arg.substr(prefix.size());
             if (!parse_double_positive(val_str, radius)) {
-                std::cerr << "Warning: Invalid --radius value '" << val_str 
-                          << "'. Falling back to " << default_radius << " m\n";
+                LOG(std::format("Warning: Invalid --radius value '{}'. Falling back to {} m", 
+                               val_str, default_radius));
                 radius = default_radius;
             }
             break;
         }
     }
 
-    std::cout << "[Config] Flag radius: " << radius << " m\n";
+    DEBUG(std::format("[Config] Flag radius: {} m\n", radius));
     return radius;
 }
 

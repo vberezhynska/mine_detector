@@ -1,11 +1,15 @@
 #include <csignal>
 #include <cstdlib>
-#include <iostream>
 #include <thread>
 #include <atomic>
 #include <chrono>
+#include <format>
+#include <string>
+#include <sstream>
 
+#include "external/debug_macros.hpp"
 #include "dto/struct_library.hpp"
+#include "dto/exit_codes.hpp"
 #include "mine_alert_manager.hpp"
 #include "db_manager.hpp"
 #include "http_server.hpp"
@@ -19,114 +23,125 @@ std::atomic<bool> g_running{true};
 
 void signal_handler(int signal) {
     if (signal == SIGINT || signal == SIGTERM) {
-        std::cout << "\n[MAIN] Shutdown signal received (" << signal << ")..." << std::endl;
+        LOG(std::format("\n[MAIN] Shutdown signal received ({})...", signal));
         g_running.store(false);
     }
 }
 
 int main(int argc, char* argv[]) {
-    std::signal(SIGINT, signal_handler);
-    std::signal(SIGTERM, signal_handler);
 
-    mine_tracker::SafeQueue<mine_tracker::MineAlertData> alert_queue;
-    
-    // SQLite DB
-    #ifndef DB_PATH
-    #define DB_PATH "mines.db"
-    #endif
+    try {
+        std::signal(SIGINT, signal_handler);
+        std::signal(SIGTERM, signal_handler);
 
-    const std::string db_file = DB_PATH;
-    auto db = std::make_shared<data::DbManager>(db_file);
-    std::cout << "[DB] Initialized database at: " << db_file << "\n";
+        mine_tracker::SafeQueue<mine_tracker::MineAlertData> alert_queue;
+        
+        // SQLite DB
+        #ifndef DB_PATH
+        #define DB_PATH "mines.db"
+        #endif
 
-    // MavLINK
-    const char* env_ip = std::getenv("MAVLINK_TARGET_IP");
-    std::string broadcast_ip = (env_ip != nullptr) ? env_ip : "10.42.0.255";
-    auto mavlink_broadcaster = std::make_shared<mine_tracker::MavlinkBroadcaster>(broadcast_ip, 14550);
+        const std::string db_file = DB_PATH;
+        auto db = std::make_shared<data::DbManager>(db_file);
+        DEBUG(std::format("[DB] Initialized database at: {}\n", db_file));
 
-    std::thread mavlink_heartbeat_thread([mavlink_broadcaster]() {
-        while (g_running.load()) {
-            mavlink_broadcaster->send_heartbeat();
-            std::this_thread::sleep_for(std::chrono::seconds(1));
-        }
-    });
+        // MavLINK
+        const char* env_ip = std::getenv("MAVLINK_TARGET_IP");
+        std::string broadcast_ip = (env_ip != nullptr) ? env_ip : "10.42.0.255";
+        auto mavlink_broadcaster = std::make_shared<mine_tracker::MavlinkBroadcaster>(broadcast_ip, 14550);
 
-    // UDP SERVER
-    constexpr uint16_t PORT = 5005;
-    mine_tracker::UdpServer udp_server(PORT);
-    
-    if (!udp_server.start()) {
-        std::cout << "[FATAL] Failed to start UDP server on port 5005." << std::endl;
-        return 1;
-    }
-
-    std::cout << "[UDP] Server bound to port 5005 successfully." << std::endl;
-    std::thread udp_thread([&udp_server, mavlink_broadcaster]() {
-        while (g_running.load()) {
-            auto udp_package = udp_server.receive_package();
-            if (std::holds_alternative<mine_tracker::TelemetryPayload>(udp_package)) {
-                const auto& telemetry = std::get<mine_tracker::TelemetryPayload>(udp_package);
-                //TODO: move to debug
-                std::cout << "[GPD DATA] Current location\n"
-                          << "  ├─ Latitude:  " << telemetry.latitude << "\n"
-                          << "  ├─ Longitude: " << telemetry.longitude << "\n"
-                          << "  ├─ GPS Fix:   " << static_cast<int>(telemetry.gps_type) << "\n"
-                          << "  └─ Timestamp: " << telemetry.timestamp << std::endl;
-                
-                mavlink_broadcaster->send_gps_position(
-                    telemetry.latitude, 
-                    telemetry.longitude
-                );
+        std::thread mavlink_heartbeat_thread([mavlink_broadcaster]() {
+            while (g_running.load()) {
+                mavlink_broadcaster->send_heartbeat();
+                std::this_thread::sleep_for(std::chrono::seconds(1));
             }
+        });
+
+        // UDP SERVER
+        constexpr uint16_t PORT = 5005;
+        mine_tracker::UdpServer udp_server(PORT);
+        
+        if (!udp_server.start()) {
+            LOG(std::format("[FATAL] Failed to start UDP server on port {}.", PORT));
+            return 1;
         }
-    });
 
-    // Alert manager worker
-    double flag_radius = mine_tracker::parse_flag_radius(argc, argv);
-    mine_tracker::Flags flags(flag_radius);
-    mine_tracker::MineAlertManager alert_manager(alert_queue, flags, mavlink_broadcaster);
-    std::jthread alert_worker(&mine_tracker::MineAlertManager::run, &alert_manager);
+        DEBUG(std::format("[UDP] Server bound to port {} successfully.\n", PORT));
+        
+        std::thread udp_thread([&udp_server, mavlink_broadcaster]() {
+            while (g_running.load()) {
+                auto udp_package = udp_server.receive_package();
+                if (std::holds_alternative<mine_tracker::TelemetryPayload>(udp_package)) {
+                    const auto& telemetry = std::get<mine_tracker::TelemetryPayload>(udp_package);
+                    
+                    std::ostringstream oss;
+                    oss << "[GPS DATA] Current location\n"
+                        << "  ├─ Latitude:  " << std::fixed << std::setprecision(6) << telemetry.latitude << "\n"
+                        << "  ├─ Longitude: " << std::fixed << std::setprecision(6) << telemetry.longitude << "\n"
+                        << "  ├─ GPS Fix:   " << static_cast<int>(telemetry.gps_type) << "\n"
+                        << "  └─ Timestamp: " << telemetry.timestamp << "\n";
+                    std::string log_msg = oss.str();
 
-    // HTTP SERVER
-    mine_tracker::HttpServer http_server;
-    
-    http_server.set_alert_callback([&alert_queue](const mine_tracker::MineAlertData& alert) {
-        std::cout << "[HTTP MINE ALERT] Lat: " << alert.lat_int << " | Lon: " << alert.lon_int << std::endl;
-        alert_queue.push(alert);
-    });
+                    DEBUG(log_msg);
+                    
+                    mavlink_broadcaster->send_gps_position(
+                        telemetry.latitude, 
+                        telemetry.longitude
+                    );
+                }
+            }
+        });
 
-    // Start HTTP Server in thread
-    std::thread http_thread([&http_server]() {
-        http_server.init(8080);
-    });
+        // Alert manager worker
+        double flag_radius = mine_tracker::parse_flag_radius(argc, argv);
+        mine_tracker::Flags flags(flag_radius);
+        mine_tracker::MineAlertManager alert_manager(alert_queue, flags, mavlink_broadcaster);
+        std::jthread alert_worker(&mine_tracker::MineAlertManager::run, &alert_manager);
 
-    std::cout << "System operational. Running... Press Ctrl+C to terminate." << std::endl;
+        // HTTP SERVER
+        mine_tracker::HttpServer http_server;
+        
+        http_server.set_alert_callback([&alert_queue](const mine_tracker::MineAlertData& alert) {
+            DEBUG(std::format("[HTTP MINE ALERT] Lat: {} | Lon: {}\n", alert.lat_int, alert.lon_int));
+            alert_queue.push(alert);
+        });
 
-    while (g_running.load()) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    }
+        // Start HTTP Server in thread
+        std::thread http_thread([&http_server]() {
+            http_server.init(8080);
+        });
 
-    // Graceful Shutdown
-    std::cout << "[MAIN] Initiating graceful shutdown..." << std::endl;
-    g_running.store(false);
-    alert_queue.stop();
+        LOG("System operational. Running... Press Ctrl+C to terminate.");
 
-    udp_server.stop();
-    if (udp_thread.joinable()) {
-        udp_thread.join();
-    }
+        while (g_running.load()) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
 
-    http_server.stop();
-    if (http_thread.joinable()) {
-        http_thread.join();
-    }
+        // Graceful Shutdown
+        LOG("[MAIN] Initiating graceful shutdown...");
+        g_running.store(false);
+        alert_queue.stop();
 
-    if (mavlink_heartbeat_thread.joinable()) {
-        mavlink_heartbeat_thread.join();
-    }
+        udp_server.stop();
+        if (udp_thread.joinable()) {
+            udp_thread.join();
+        }
 
-    // alert_worker automatically joins here via std::jthread destructor
+        http_server.stop();
+        if (http_thread.joinable()) {
+            http_thread.join();
+        }
 
-    std::cout << "[MAIN] Stopped successfully." << std::endl;
-    return 0;
+        if (mavlink_heartbeat_thread.joinable()) {
+            mavlink_heartbeat_thread.join();
+        }
+
+        // alert_worker automatically joins here via std::jthread destructor
+
+        LOG("[MAIN] Stopped successfully.");
+        return static_cast<int>(ExitCode::Success);
+    } catch (const std::exception& e) {
+        std::cerr << e.what() << std::endl;
+        return static_cast<int>(ExitCode::RuntimeError);
+  }
 }
