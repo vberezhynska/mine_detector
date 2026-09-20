@@ -121,9 +121,9 @@ namespace mine_detector {
                     bool isSucceed = false;
                     for (uint8_t attempt = 0; attempt < 3 && !isSucceed; ++attempt) {
                         isSucceed = sendMineAlert();
-                        if (!isSucceed) {
-                            vTaskDelay(pdMS_TO_TICKS(100)); // Brief backoff between retries
-                        }
+                        if (isSucceed) break;
+
+                        vTaskDelay(pdMS_TO_TICKS(2000)); // 2s backoff between retries
                     }
 
                     if (!isSucceed) {
