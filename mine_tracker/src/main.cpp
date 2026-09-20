@@ -13,8 +13,7 @@
 #include "flags.hpp"
 #include "safe_queue.hpp"
 #include "mavlink_broadcaster.hpp"
-
-inline constexpr double FLAG_RADIUS = 30.0; //30m
+#include "config/cli_args.hpp"
 
 std::atomic<bool> g_running{true};
 
@@ -67,8 +66,8 @@ int main(int argc, char* argv[]) {
             auto udp_package = udp_server.receive_package();
             if (std::holds_alternative<mine_tracker::TelemetryPayload>(udp_package)) {
                 const auto& telemetry = std::get<mine_tracker::TelemetryPayload>(udp_package);
-                
-                std::cout << "[UDP DATA] Mine Alert Received!\n"
+                //TODO: move to debug
+                std::cout << "[GPD DATA] Current location\n"
                           << "  ├─ Latitude:  " << telemetry.latitude << "\n"
                           << "  ├─ Longitude: " << telemetry.longitude << "\n"
                           << "  ├─ GPS Fix:   " << static_cast<int>(telemetry.gps_type) << "\n"
@@ -82,9 +81,9 @@ int main(int argc, char* argv[]) {
         }
     });
 
-    //TODO: move radius to configuration
     // Alert manager worker
-    mine_tracker::Flags flags(FLAG_RADIUS);
+    double flag_radius = mine_tracker::parse_flag_radius(argc, argv);
+    mine_tracker::Flags flags(flag_radius);
     mine_tracker::MineAlertManager alert_manager(alert_queue, flags, mavlink_broadcaster);
     std::jthread alert_worker(&mine_tracker::MineAlertManager::run, &alert_manager);
 
@@ -94,10 +93,6 @@ int main(int argc, char* argv[]) {
     http_server.set_alert_callback([&alert_queue](const mine_tracker::MineAlertData& alert) {
         std::cout << "[HTTP MINE ALERT] Lat: " << alert.lat_int << " | Lon: " << alert.lon_int << std::endl;
         alert_queue.push(alert);
-    });
-
-    http_server.set_status_callback([]() -> mine_tracker::StatusData { //TODO: remove for production. Just for testing
-        return { .system_ok = true, .active_sensors = 4 };
     });
 
     // Start HTTP Server in thread

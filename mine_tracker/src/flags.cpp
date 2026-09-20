@@ -17,7 +17,8 @@ namespace mine_tracker {
         bgi::rtree<FlagValue, bgi::rstar<16>> rtree;
         const double radius_meters;
         int next_id {0}; 
-        int next_group_id {0}; //TODO: sync with id in DB
+        int next_group_id {1}; //To make mine name "Mine_001"
+        //TODO: sync with id in DB
 
         explicit Impl(double radius_meters) : radius_meters(radius_meters){};
         ~Impl() = default;
@@ -86,8 +87,7 @@ namespace mine_tracker {
                       << ") -> " << (found ? "YES" : "NO") << "\n";
             return found;
         }
-        //TODO: Update this to search my Radius or region. Not sure if it should be first point
-        //TODO: but I am leaving it as it is for now
+
         std::pair<GeoPoint, FlagMeta> find_closest_pair_within(const GeoPoint& target) const {
             const std::pair<GeoPoint, FlagMeta> default_point{GeoPoint(0.0, 0.0), FlagMeta{-1, -1}};
             auto query = bgi::nearest(target, 1);

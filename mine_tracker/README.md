@@ -89,7 +89,9 @@ sudo nmcli connection modify "Pi-AP" connection.autoconnect-priority 1
 
 *** Run wiht MavLink variable ***
 Run from Local:
-MAVLINK_TARGET_IP=192.168.1.222 ./mine_tracker
+MAVLINK_TARGET_IP=192.168.1.222 ./mine_tracker --radius 15
+./mine_tracker --radius=5
+./mine_tracker //default ip will be used, default 30m radius will be used
 
 *** Settings in QGround Control to display circle ***
 Enable Fence Display in QGCMake sure the UI layer is set to display fences:In QGC, click the Map Settings / Layers icon (the paper stack icon on the left/top-right of the map view).Look for GeoFence or Inclusion/Exclusion Zones and ensure it is checked/toggled ON.Switch to the Plan view (top-left menu $\rightarrow$ Plan) and click GeoFence to see if any fence items are populated in the mission list.

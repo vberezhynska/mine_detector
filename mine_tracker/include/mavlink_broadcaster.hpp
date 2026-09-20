@@ -19,7 +19,7 @@ namespace mine_tracker {
 
         void send_heartbeat();
         void send_gps_position(int32_t lat_e7, int32_t lon_e7, int32_t alt_mm = 0, uint16_t hdg_cdeg = 0);
-        void send_danger_zone(double radius_m, int32_t lat_e7, int32_t lon_e7, const mine_tracker::GroupConfidence& confidence_group);
+        void send_danger_zone(int32_t lat_e7, int32_t lon_e7, const mine_tracker::GroupConfidence& confidence_group);
     
         private:
         struct Impl;

@@ -45,15 +45,6 @@ bool HttpServer::set_alert_callback(AlertCallback callback, std::chrono::millise
     return true;
 }
 
-// Setter for Status Callback
-bool HttpServer::set_status_callback(StatusCallback callback, std::chrono::milliseconds timeout) {
-    std::unique_lock<std::timed_mutex> lock(pImpl->callback_mutex, timeout);
-    if (!lock.owns_lock()) return false;
-
-    pImpl->status_callback = std::move(callback);
-    return true;
-}
-
 bool HttpServer::init(uint16_t port) {
     // ==========================================
     // Route 1: POST /v1/api/alerts (Existing)
