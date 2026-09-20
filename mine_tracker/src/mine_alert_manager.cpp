@@ -30,7 +30,7 @@ namespace mine_tracker {
         void send_mavlink_alert(int32_t lat_e7, int32_t lon_e7, const GroupConfidence& group_confidence) {
             if (mavlink) {
                 mavlink->send_danger_zone(lat_e7, lon_e7, group_confidence);
-                DEBUG("[INFO] MavLink send mine point.\n");
+                DEBUG("[INFO] MavLink send mine point.");
                 return;
             }
 
@@ -48,26 +48,21 @@ namespace mine_tracker {
     void MineAlertManager::run() {
         MineAlertData data;
         while (pImpl->alert_queue.pop(data)) {
-            DEBUG(std::format(
-                "[ MineAlertManager ] Processing ping at ({:.6f}, {:.6f})\n",
-                data.lat(), data.lon()
-            ));
-
             int group_id = pImpl->flags.add_flag(data.lon(), data.lat());
             if (group_id == -1) {
-                DEBUG("[ MineAlertManager ] Flag added with -1 group. No cluster created.\n");
+                DEBUG("[ MineAlertManager ] Flag added with -1 group. No cluster created.");
                 continue;
             }
 
             auto [it, inserted] = pImpl->groups.try_emplace(group_id, group_id);
             if (inserted) {
                 DEBUG(std::format(
-                    "[ MineAlertManager ] -> PROMOTED! Second touch confirmed nearby. Created Group {} (Baseline prior: 20%)\n",
+                    "[ MineAlertManager ] -> PROMOTED! Second touch confirmed nearby. Created Group {} (Baseline prior: 20%)",
                     group_id
                 ));
             } else {
                 DEBUG(std::format(
-                    "[ MineAlertManager ] -> Corroborating hit for existing Group {}\n",
+                    "[ MineAlertManager ] -> Corroborating hit for existing Group {}",
                     group_id
                 ));
             }
@@ -75,7 +70,7 @@ namespace mine_tracker {
             it->second.update_group();
 
             DEBUG(std::format(
-                "[ MineAlertManager ] Group {} Status | Hits: {} | Confidence: {:.1f}%\n",
+                "[ MineAlertManager ] Group {} Status | Hits: {} | Confidence: {:.1f}%",
                 group_id, it->second.hit_count(), it->second.confidence() * 100.0
             ));
             

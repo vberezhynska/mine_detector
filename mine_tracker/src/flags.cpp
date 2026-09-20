@@ -46,17 +46,11 @@ namespace mine_tracker {
 
         int add(double lon, double lat) {
             if (lon < 0.01 || lat < 0.01) {
-                DEBUG(std::format("[ERROR] Alert request has default GPS coordinates ({:.6f}, {:.6f}). GPS point will be skipped.\n", lat, lon));
+                DEBUG(std::format("[ERROR] Alert request has default GPS coordinates ({:.6f}, {:.6f}). GPS point will be skipped.", lat, lon));
                 return -1;
             }
 
             const GeoPoint target(lon, lat);
-
-            DEBUG(std::format(
-                "[ Flags::add ] Checking location ({:.6f}, {:.6f}) within radius {}m (active clusters/candidates: {})\n",
-                lat, lon, radius_meters, rtree.size()
-            ));
-
             auto neighbor_pair = find_closest_pair_within(target);
 
             // Case: No neighbor or cluster within radius -> Store as unclustered solitary flag
@@ -65,7 +59,7 @@ namespace mine_tracker {
                 rtree.insert(std::make_pair(target, FlagMeta{assigned_id, -1}));
                 //TODO: store in DB?
                 DEBUG(std::format(
-                    "[ Flags::add ] -> No neighbor within {}m. Inserted solitary candidate id={}\n",
+                    "[ Flags::add ] -> No neighbor within {}m. Inserted solitary candidate id={}",
                     radius_meters, assigned_id
                 ));
                 return -1;
@@ -78,7 +72,7 @@ namespace mine_tracker {
                 assigned_group = next_group_id++;
 
                 LOG(std::format(
-                    "[ Flags::add ] -> Found solitary neighbor flag id={} at ({:.6f}, {:.6f}). Promoting to group_id={}\n",
+                    "[ Flags::add ] -> Found solitary neighbor flag id={} at ({:.6f}, {:.6f}). Promoting to group_id={}",
                     neighbor_pair.second.id,
                     bg::get<1>(neighbor_pair.first),
                     bg::get<0>(neighbor_pair.first),
@@ -95,14 +89,14 @@ namespace mine_tracker {
                 rtree.insert(std::make_pair(centroid, FlagMeta{assigned_group, assigned_group}));
 
                 LOG(std::format(
-                    "[ Flags::add ] -> Created Group {} centered at ({:.6f}, {:.6f}) with 2 hits\n",
+                    "[ Flags::add ] -> Created Group {} centered at ({:.6f}, {:.6f}) with 2 hits",
                     assigned_group, gr.lat, gr.lon
                 ));
             } 
             // Case: Matched an existing group centroid -> Corroborate hit & update centroid
             else {
                 LOG(std::format(
-                    "[ Flags::add ] -> Matched existing group_id={}. Updating centroid and hits.\n",
+                    "[ Flags::add ] -> Matched existing group_id={}. Updating centroid and hits.",
                     assigned_group
                 ));
                 // Re-insert updated centroid into R-tree
@@ -113,7 +107,7 @@ namespace mine_tracker {
                 rtree.insert(std::make_pair(new_centroid, FlagMeta{assigned_group, assigned_group}));
 
                 LOG(std::format(
-                    "[ Flags::add ] -> Group {} centroid shifted to ({:.6f}, {:.6f}) (Total hits: {})\n",
+                    "[ Flags::add ] -> Group {} centroid shifted to ({:.6f}, {:.6f}) (Total hits: {})",
                     assigned_group, gr.lat, gr.lon, gr.hit_count
                 ));
             }
@@ -131,7 +125,7 @@ namespace mine_tracker {
             bool found = (rtree.qbegin(in_radius) != rtree.qend());
 
             DEBUG(std::format(
-                "[ Flags::contains_within ] Query ({:.6f}, {:.6f}) -> {}\n",
+                "[ Flags::contains_within ] Query ({:.6f}, {:.6f}) -> {}",
                 lat, lon, (found ? "YES" : "NO")
             ));
             return found;
@@ -144,7 +138,7 @@ namespace mine_tracker {
 
             if (it == rtree.qend()) {
                 DEBUG(std::format(
-                    "[ Flags::find_closest_pair_within ] No flags within {}m\n",
+                    "[ Flags::find_closest_pair_within ] No flags within {}m",
                     radius_meters
                 ));
                 return default_point;
@@ -154,7 +148,7 @@ namespace mine_tracker {
 
             if (dist <= radius_meters) {
                 DEBUG(std::format(
-                    "[ Flags::find_closest_pair_within ] Found closest entry id={} (group={}) at distance {:.2f}m\n",
+                    "[ Flags::find_closest_pair_within ] Found closest entry id={} (group={}) at distance {:.2f}m",
                     it->second.id,
                     it->second.group_id,
                     dist
@@ -163,7 +157,7 @@ namespace mine_tracker {
             }
 
             DEBUG(std::format(
-                "[ Flags::find_closest_pair_within ] Closest entry is at {:.2f}m (exceeds {}m radius)\n",
+                "[ Flags::find_closest_pair_within ] Closest entry is at {:.2f}m (exceeds {}m radius)",
                 dist,
                 radius_meters
             ));

@@ -23,7 +23,7 @@ std::atomic<bool> g_running{true};
 
 void signal_handler(int signal) {
     if (signal == SIGINT || signal == SIGTERM) {
-        LOG(std::format("\n[MAIN] Shutdown signal received ({})...", signal));
+        LOG(std::format("[MAIN] Shutdown signal received ({})...", signal));
         g_running.store(false);
     }
 }
@@ -43,7 +43,7 @@ int main(int argc, char* argv[]) {
 
         const std::string db_file = DB_PATH;
         auto db = std::make_shared<data::DbManager>(db_file);
-        DEBUG(std::format("[DB] Initialized database at: {}\n", db_file));
+        DEBUG(std::format("[DB] Initialized database at: {}", db_file));
 
         // MavLINK
         const char* env_ip = std::getenv("MAVLINK_TARGET_IP");
@@ -66,7 +66,7 @@ int main(int argc, char* argv[]) {
             return 1;
         }
 
-        DEBUG(std::format("[UDP] Server bound to port {} successfully.\n", PORT));
+        DEBUG(std::format("[UDP] Server bound to port {} successfully.", PORT));
         
         std::thread udp_thread([&udp_server, mavlink_broadcaster]() {
             while (g_running.load()) {
@@ -102,7 +102,7 @@ int main(int argc, char* argv[]) {
         mine_tracker::HttpServer http_server;
         
         http_server.set_alert_callback([&alert_queue](const mine_tracker::MineAlertData& alert) {
-            DEBUG(std::format("[HTTP MINE ALERT] Lat: {} | Lon: {}\n", alert.lat_int, alert.lon_int));
+            DEBUG(std::format("[HTTP MINE ALERT] Lat: {} | Lon: {}", alert.lat_int, alert.lon_int));
             alert_queue.push(alert);
         });
 

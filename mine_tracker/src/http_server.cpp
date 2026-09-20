@@ -62,7 +62,7 @@ bool HttpServer::init(uint16_t port) {
             data.lon_int = payload.at("lon_int").get<int32_t>();
             data.gp_type = payload.at("gpType").get<int32_t>();
 
-            DEBUG(std::format("[MINE ALERT] Event: {} | Lat: {} | Lon: {} | GpType: {}\n",
+            DEBUG(std::format("[MINE ALERT] Event: {} | Lat: {} | Lon: {} | GpType: {}",
                               data.event,
                               data.lat_int,
                               data.lon_int,
