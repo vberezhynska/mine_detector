@@ -1,9 +1,10 @@
 # Project TODO List
 
-## 📌 High Priority (deadline 17.09)
+## 📌 High Priority (deadline 20.09)
 ## Definition of Done: working UDP with GPS and HTTP with alert
-- [ ] Testing gps and http
-- [ ] Add QG Control
+- [ ] Add circles
+- [ ] Add cinfiguration
+- [ ] Add logs
 
 ## 📌 High Priority (deadline 18.09)
 ## Definition of Done: fully working solution with QG Control and correctly identified flags
@@ -23,6 +24,7 @@
 - [ ] Understand FreeRTOS tasks
 
 ---
+*Update on: September 19, 2026*
 *Update on: September 17, 2026*
 *Update on: September 13, 2026*
 *Created on: September 6, 2026*

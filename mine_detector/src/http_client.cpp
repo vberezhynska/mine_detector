@@ -79,29 +79,26 @@ namespace networking {
         return false;
     }
 
-    //TODO: update with TelemetryPayload
-    bool HttpClient::sendMineAlert(int32_t latitude, int32_t longitude, int8_t gp_type){
-            json alertJson = {
-                {"event", "MINE_DETECTED"},
-                {"lat_int", latitude},
-                {"lon_int", longitude},
-                {"gpType", gp_type}
-            };
+    bool HttpClient::sendMineAlert(int32_t latitude, int32_t longitude, int8_t gp_type) {
+        json alertJson = {
+            {"event", "MINE_DETECTED"},
+            {"lat_int", latitude},
+            {"lon_int", longitude},
+            {"gpType", gp_type}
+        };
 
         std::string payload = alertJson.dump();
-        //TODO: add port to base url
         std::string fullUrl = pImpl->baseUrl + ":" + std::to_string(pImpl->port) + pImpl->alert_url;
 
-        ESP_LOGI(TAG, "HTTP sendMineAlert will send to fullUrl: %s", 
-             fullUrl.c_str());
+        ESP_LOGI(TAG, "HTTP sendMineAlert will send to fullUrl: %s", fullUrl.c_str());
 
         esp_http_client_set_url(pImpl->client, fullUrl.c_str());
         esp_http_client_set_method(pImpl->client, HTTP_METHOD_POST);
         esp_http_client_set_header(pImpl->client, "Content-Type", "application/json");
-        esp_http_client_set_header(pImpl->client, "Connection", "close"); //close socket connection
+        esp_http_client_set_header(pImpl->client, "Connection", "close");
         esp_http_client_set_post_field(pImpl->client, payload.c_str(), static_cast<int>(payload.length()));
 
-        esp_err_t err = esp_http_client_perform(pImpl->client); //opens and closes socket connection
+        esp_err_t err = esp_http_client_perform(pImpl->client);
 
         if (err != ESP_OK) {
             ESP_LOGE(TAG, "HTTP POST failed: %s", esp_err_to_name(err));
@@ -110,10 +107,16 @@ namespace networking {
         }
 
         int statusCode = esp_http_client_get_status_code(pImpl->client);
-        if (statusCode >= 200 && statusCode < 300 && parseMineAlertResponse()) { 
+
+        if (statusCode >= 200 && statusCode < 300) { 
             ESP_LOGI(TAG, "Alert sent successfully (HTTP %d)", statusCode);
+            
+            if (!parseMineAlertResponse()) {
+                ESP_LOGW(TAG, "Response body was not parsed, but HTTP status was %d", statusCode);
+            }
+
             esp_http_client_close(pImpl->client);
-            return true;
+            return true; 
         }
         
         ESP_LOGE(TAG, "Server responded with error status: %d", statusCode);

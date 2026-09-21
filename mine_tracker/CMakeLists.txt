@@ -96,6 +96,7 @@ find_package(Threads REQUIRED)
 
 # ---- Libraries ----
 add_library(tracker 
+    src/cli_args.cpp    
     src/udp_server.cpp
     src/http_server.cpp
     src/db_manager.cpp
