@@ -11,7 +11,6 @@
 #include "dto/struct_library.hpp"
 #include "dto/exit_codes.hpp"
 #include "mine_alert_manager.hpp"
-#include "db_manager.hpp"
 #include "http_server.hpp"
 #include "udp_server.hpp"
 #include "flags.hpp"
@@ -35,15 +34,6 @@ int main(int argc, char* argv[]) {
         std::signal(SIGTERM, signal_handler);
 
         mine_tracker::SafeQueue<mine_tracker::MineAlertData> alert_queue;
-        
-        // SQLite DB
-        #ifndef DB_PATH
-        #define DB_PATH "mines.db"
-        #endif
-
-        const std::string db_file = DB_PATH;
-        auto db = std::make_shared<data::DbManager>(db_file);
-        DEBUG(std::format("[DB] Initialized database at: {}", db_file));
 
         // MavLINK
         const char* env_ip = std::getenv("MAVLINK_TARGET_IP");
