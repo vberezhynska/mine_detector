@@ -54,6 +54,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     dfu-util \
     libusb-1.0-0 \
     udev \
+    libasio-dev \
     && rm -rf /var/lib/apt/lists/*
 
 RUN git clone --depth 1 --shallow-submodules --recursive -b v5.3 https://github.com/espressif/esp-idf.git ${IDF_PATH} && \

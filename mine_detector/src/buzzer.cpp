@@ -86,7 +86,7 @@ namespace mine_detector {
         if (pImpl->type == BuzzerType::ACTIVE) {
             gpio_set_level(pImpl->pin, 1);
         } else {
-            playTone(2000); // Default tone
+            playTone(1000); // Default tone
             return;
         }
         m_isSounding = true;
