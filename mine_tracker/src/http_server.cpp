@@ -3,6 +3,7 @@
 #include "crow.h"
 #include <external/json.hpp>
 #include "dto/telemetry_types.hpp"
+#include "dto/struct_library.hpp"
 
 #include <iostream>
 #include <mutex>
@@ -65,13 +66,13 @@ bool HttpServer::init(uint16_t port) {
 
             MineAlertData data;
             data.event = payload.at("event").get<std::string>();
-            data.lat = payload.at("lat").get<int32_t>();
-            data.lon = payload.at("lon").get<int32_t>();
+            data.lat_int = payload.at("lat_int").get<int32_t>();
+            data.lon_int = payload.at("lon_int").get<int32_t>();
             data.gp_type = payload.at("gpType").get<int32_t>();
 
             std::cout << "[MINE ALERT] Event: " << data.event 
-                      << " | Lat: "     << data.lat 
-                      << " | Lon: "     << data.lon << std::endl
+                      << " | Lat: "     << data.lat_int 
+                      << " | Lon: "     << data.lon_int << std::endl
                       << " | GpType: "  << to_string(static_cast<NMEA_Type>(data.gp_type)) << std::endl;
 
             // 2. Fetch callback atomically under lock with a 100ms timeout
@@ -129,6 +130,7 @@ bool HttpServer::init(uint16_t port) {
 
     // Start server (blocking call)
     std::cout << "Mine Alert Server running on port " << port << "..." << std::endl;
+    pImpl->app.signal_clear(); // Disables Crow's internal SIGINT/SIGTERM handlers
     pImpl->app.port(port).multithreaded().run();
 
     return true;

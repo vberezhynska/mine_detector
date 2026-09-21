@@ -7,14 +7,10 @@
 #include <chrono>
 
 namespace mine_tracker {
+    struct MineAlertData;
+}
 
-    struct MineAlertData {
-        std::string event;
-        int32_t lat;
-        int32_t lon;
-        int8_t gp_type;
-    };
-
+namespace mine_tracker {
     struct StatusData {
         bool system_ok{true};
         uint32_t active_sensors{1};
