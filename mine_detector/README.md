@@ -1,55 +1,121 @@
-/mine_detector - shoudl be deployed on ESP32 and run there. It reads sensors and send data via ethernet to RPi
-/mine_tracker - listens to notifications from ESP32, analize them, save points to the file and sends them via MavLink
+# Mine Detector (`/mine_detector`)
 
+Firmware for the ESP32 edge device. It samples onboard sensor readings (touch, GPS, buzzer) and streams telemetry to a Raspberry Pi over Ethernet.
 
+---
 
-*** Flash or monitore ESP32 ****    
-**HARDWARE**
-ESP32 3V3 -> '+' -> VCC / VIN
-Touch sensor (green) ->  GPIO 4
-Buzzer (blue) -> GPIO 5
-GPS TX (yellow) -> GPIO 21
-GPS RX (blue) -> GPIO 22
+## 1. Hardware Setup
 
-To flash connect Laptop -> UART USB-C
+### Pinout & Wiring
 
-**SOFTWARE**
---- in PowerShell (Admin) ---
-usbipd list // find "USB to UART Bridge Controller" : 1-1    10c4:ea60  CP2102N USB to UART Bridge Controller
-//if it's Not shared, do: 
-usbipd bind --busid 1-1
+| Component Pin | ESP32 Pin | Wire Color | Description |
+| :--- | :--- | :--- | :--- |
+| **VCC / VIN** | `3V3` / `+` | — | Common 3.3V power bus |
+| **Touch Sensor** | `GPIO 4` | Green | Digital input |
+| **Buzzer** | `GPIO 5` | Blue | Output |
+| **GPS TX** | `GPIO 21` | Yellow | ESP32 RX |
+| **GPS RX** | `GPIO 22` | Blue | ESP32 TX |
 
-// When Shared
-usbipd attach --wsl --busid 1-1
-usbipd list
-// shoudl be  : 1-1    10c4:ea60  CP2102N USB to UART Bridge Controller                         Attached
+> **Connection:** Connect the laptop directly to the ESP32 via the onboard **UART USB-C** port for power, flashing, and serial logging.
 
---- In WSL/Docker ---
-from mine_detector
-idf.py build
+---
+
+## 2. Environment Setup (Windows WSL2)
+
+If building and flashing through WSL2 or a DevContainer on Windows, forward the serial bridge using `usbipd`.
+
+### PowerShell (Run as Administrator)
+
+1. Identify the device Bus ID:
+   ```powershell
+   usbipd list
+   ```
+   *Look for: `CP2102N USB to UART Bridge Controller` (e.g., `1-1`).*
+
+2. Bind the device (persists across sessions):
+   ```powershell
+   usbipd bind --busid 1-1
+   ```
+
+3. Attach the device to WSL:
+   ```powershell
+   usbipd attach --wsl --busid 1-1
+   ```
+
+4. Confirm state:
+   ```powershell
+   usbipd list
+   ```
+   *The target device state should now report as **`Attached`**.*
+
+---
+
+## 3. Build, Flash & Monitor (WSL / Docker)
+
+From the project directory:
+
+```bash
 cd mine_detector
+```
 
->> if build issue: idf.py build -- -j1
+### Build Firmware
 
-/// To Flash from WSL/Docker ///
-ls /dev/ttyUSB* // should have dev/ttyUSB0. If not => rebuild DevContainer
-sudo chmod 666 /dev/ttyUSB0
-idf.py -p /dev/ttyUSB0 flash monitor
+```bash
+idf.py build
+```
 
-/// To check logs from WSL ///
+> **Troubleshooting:** If the build fails due to memory exhaustion or toolchain concurrency issues, limit the compiler to a single worker:
+> ```bash
+> idf.py build -- -j1
+> ```
+
+---
+
+### Flash & Monitor
+
+1. Verify that the virtual port is recognized:
+   ```bash
+   ls /dev/ttyUSB*
+   ```
+   *You should see `/dev/ttyUSB0`. If missing, verify the `usbipd attach` step or `reload the container`.*
+
+2. Ensure read/write device permissions:
+   ```bash
+   sudo chmod 666 /dev/ttyUSB0
+   ```
+
+3. Flash the binary and stream monitor logs:
+   ```bash
+   idf.py -p /dev/ttyUSB0 flash monitor
+   ```
+
+---
+
+### Standalone Monitoring
+
+To open the serial console without reflashing:
+
+```bash
 sudo chmod 666 /dev/ttyUSB0
 idf.py -p /dev/ttyUSB0 monitor
+```
 
-/// Exit from monitor ///
-Ctrl + ]
+#### ESP-IDF Monitor Shortcuts
 
-/// Soft Reboot ESP32 ///
-Ctrl + R
+| Shortcut | Action |
+| :--- | :--- |
+| `Ctrl + ]` | Exit monitor |
+| `Ctrl + R` | Soft-reset the ESP32 chip |
 
+---
 
-*** TEST ***
+## 4. Running Unit Tests
+
+Run local GPS parser tests using CMake:
+
+```bash
 mkdir -p test/build && cd test/build
-cd /test/build
 cmake ..
 make -j$(nproc)
 ./run_gps_tests
+```
