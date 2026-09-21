@@ -57,7 +57,6 @@ namespace mine_tracker {
             if (neighbor_pair.second.id == -1) {
                 int assigned_id = next_id++;
                 rtree.insert(std::make_pair(target, FlagMeta{assigned_id, -1}));
-                //TODO: store in DB?
                 DEBUG(std::format(
                     "[ Flags::add ] -> No neighbor within {}m. Inserted solitary candidate id={}",
                     radius_meters, assigned_id

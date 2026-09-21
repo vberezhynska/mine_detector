@@ -22,7 +22,7 @@ static const char* TAG = "GPS_DECODER";
 
 namespace mine_detector {
     const uint32_t SCALE_FACTOR = 10000000; // required for MAVLink (deg * 10^7)
-//TODO: use telemetry types hpp here
+
     int32_t GgaDecoder::to_int32_point(double val) {
         return static_cast<int32_t>(val * SCALE_FACTOR);
     }

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(mine_tracker CXX C) # C kept for sqlite3.c compilation
+project(mine_tracker CXX C)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 20)
@@ -35,23 +35,6 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(Crow)
 # ===== END Crow =====
-
-# ===== SQLite3 ===== 
-FetchContent_Declare(
-    sqlite3
-    URL https://www.sqlite.org/2024/sqlite-amalgamation-3450200.zip
-    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
-)
-FetchContent_MakeAvailable(sqlite3)
-
-# Build SQLite as a target directly from fetched sources
-add_library(sqlite3_lib STATIC ${sqlite3_SOURCE_DIR}/sqlite3.c)
-target_include_directories(sqlite3_lib PUBLIC ${sqlite3_SOURCE_DIR})
-target_compile_definitions(sqlite3_lib PRIVATE
-    SQLITE_ENABLE_JSON1
-    SQLITE_ENABLE_RTREE
-)
-# ===== END SQLite3 =====
 
 # ===== Boost Headers (for Boost.Geometry) ===== 
 FetchContent_Declare(
@@ -99,7 +82,6 @@ add_library(tracker
     src/cli_args.cpp    
     src/udp_server.cpp
     src/http_server.cpp
-    src/db_manager.cpp
     src/flags.cpp
     src/mine_alert_manager.cpp
     src/confidence_engine.cpp
@@ -117,7 +99,6 @@ target_include_directories(tracker PUBLIC
 target_link_libraries(tracker PUBLIC 
     Crow::Crow
     Threads::Threads
-    sqlite3_lib
     boost_headers
     mavlink
 )
@@ -125,10 +106,6 @@ target_link_libraries(tracker PUBLIC
 # ---- Main Executable ----
 add_executable(mine_tracker 
     src/main.cpp
-)
-
-target_compile_definitions(mine_tracker PRIVATE
-    DB_PATH="${CMAKE_SOURCE_DIR}/mines.db"
 )
 
 # Link tracker library to the executable

@@ -53,7 +53,7 @@ bool HttpServer::init(uint16_t port) {
     CROW_ROUTE(pImpl->app, "/v1/api/alerts").methods(crow::HTTPMethod::POST)
     ([this](const crow::request& req) {
         try {
-            // 1. Parse JSON payload
+            // Parse JSON payload
             json payload = json::parse(req.body);
 
             MineAlertData data;
@@ -68,7 +68,7 @@ bool HttpServer::init(uint16_t port) {
                               data.lon_int,
                               to_string(static_cast<NMEA_Type>(data.gp_type))));
 
-            // 2. Fetch callback atomically under lock with a 100ms timeout
+            // Fetch callback atomically under lock with a 100ms timeout
             AlertCallback cb_copy = nullptr;
             {
                 std::unique_lock<std::timed_mutex> lock(pImpl->callback_mutex, std::chrono::milliseconds(100));
@@ -79,12 +79,12 @@ bool HttpServer::init(uint16_t port) {
                 }
             } // Lock released immediately here
 
-            // 3. Execute callback outside the lock to prevent blocking HTTP threads
+            // Execute callback outside the lock to prevent blocking HTTP threads
             if (cb_copy) {
                 cb_copy(data);
             }
 
-            // 4. Return 200 OK
+            // Return 200 OK
             json response = {{"status", "success"}};
             return crow::response(200, response.dump());
 
