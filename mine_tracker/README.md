@@ -1,5 +1,5 @@
 Testing UDP SERVER from PowerShell:
-$u = [System.Net.Sockets.UdpClient]::new(); $b = [byte[]](0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00); [System.BitConverter]::GetBytes([uint32]50451200).CopyTo($b, 1); [System.BitConverter]::GetBytes([uint32]30523400).CopyTo($b, 5); $b[9] = [byte]2; [System.BitConverter]::GetBytes([uint32]1700000000).CopyTo($b, 10); $u.Send($b, $b.Length, "vabe-pi", 5005); $u.Close()
+$u = [System.Net.Sockets.UdpClient]::new(); $b = [byte[]](0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00); [System.BitConverter]::GetBytes([uint32]504512000).CopyTo($b, 1); [System.BitConverter]::GetBytes([uint32]305234000).CopyTo($b, 5); $b[9] = [byte]2; [System.BitConverter]::GetBytes([uint32]1700000000).CopyTo($b, 10); $u.Send($b, $b.Length, "vabe-pi", 5005); $u.Close()
 
 Testing HTTP SERVER from PowerShell:
 GET:
@@ -10,7 +10,7 @@ curl.exe -i -X GET http://192.168.1.199:8080/v1/api/status
 POST:
 POST http://10.42.0.1:8080/v1/api/alerts
 POST http://192.168.1.199:8080/v1/api/alerts
-{"event": "MINE_FOUND", "lat_int": 50451200, "lon_int": 30523400, "gpType": 2}
+{"event": "MINE_FOUND", "lat_int": 504512000, "lon_int": 305234000, "gpType": 2}
 
 
 # Clone Crow repository
@@ -62,3 +62,6 @@ sudo nmcli connection modify "netplan-wlan0-WirelessNet_2" connection.autoconnec
 
 # Set lower autoconnect priority on AP
 sudo nmcli connection modify "Pi-AP" connection.autoconnect-priority 1
+
+*** Run wiht MavLink variable ***
+MAVLINK_TARGET_IP=192.168.1.222 ./mine_tracker

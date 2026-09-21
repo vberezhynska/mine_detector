@@ -4,7 +4,7 @@
 #include <iostream>
 #include <variant>
 
-const uint32_t GPS_SCALE_FACTOR = 1000000; 
+const uint32_t GPS_SCALE_FACTOR = 10000000; //scaling required for MAVLink (deg * 10^7)
 
 namespace mine_tracker {
 

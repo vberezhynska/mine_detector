@@ -66,10 +66,31 @@ if(NOT boost_source_POPULATED)
     FetchContent_MakeAvailable(boost_source)
 endif()
 
-# Create an interface target for header-only Boost usage
 add_library(boost_headers INTERFACE)
 target_include_directories(boost_headers INTERFACE ${boost_source_SOURCE_DIR})
 # ===== END Boost Headers =====
+
+# ===== MavLink Headers ===== 
+FetchContent_Declare(
+    mavlink_c_v2
+    GIT_REPOSITORY https://github.com/mavlink/c_library_v2.git
+    GIT_TAG        master  
+    GIT_SHALLOW    TRUE    
+)
+
+FetchContent_GetProperties(mavlink_c_v2)
+if(NOT mavlink_c_v2_POPULATED)
+    FetchContent_Populate(mavlink_c_v2)
+endif()
+
+if(NOT TARGET mavlink)
+    add_library(mavlink INTERFACE)
+    target_include_directories(mavlink INTERFACE
+        ${mavlink_c_v2_SOURCE_DIR}
+        ${mavlink_c_v2_SOURCE_DIR}/common
+    )
+endif()
+# ===== END MavLink Headers =====
 
 find_package(Threads REQUIRED)
 
@@ -81,6 +102,7 @@ add_library(tracker
     src/flags.cpp
     src/mine_alert_manager.cpp
     src/confidence_engine.cpp
+    src/mavlink_broadcaster.cpp
 )
 
 # Explicitly declare where your header files live
@@ -96,6 +118,7 @@ target_link_libraries(tracker PUBLIC
     Threads::Threads
     sqlite3_lib
     boost_headers
+    mavlink
 )
 
 # ---- Main Executable ----
