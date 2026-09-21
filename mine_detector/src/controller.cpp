@@ -127,8 +127,6 @@ namespace mine_detector {
                     }
 
                     if (!isSucceed) {
-                        //TODO: on retry I am updating location for last one. That's probabaly wrong and I should send request with actual location on event trigger
-                        //TODO: Action needed: may be error UDP request of so, if http is down. Or breack heartbit
                         ESP_LOGE(TAG, "Send flag failed. Action needed!");
                     }
             } else {
