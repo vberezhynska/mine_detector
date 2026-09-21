@@ -37,7 +37,7 @@ From your development workstation (e.g., Ubuntu terminal):
 cd ~/repos/mine_detector
 
 # Via standard LAN IP:
-scp -r mine_tracker/ user_name@192.168.1.xxx:~/Documents
+scp -r mine_tracker/ user_name@192.168.1.222:~/Documents
 
 # Or via Hotspot/Ad-Hoc IP:
 scp -r mine_tracker/ user_name@10.42.0.x:~/Documents

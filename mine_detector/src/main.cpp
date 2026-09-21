@@ -32,7 +32,6 @@ constexpr const char* WIFI_PASS = "PiSecretKey123";
 
 constexpr const char* HTTP_BASE_URL = "http://10.42.0.1";
 
-// Helper for unrecoverable initialization failures
 [[noreturn]] static void handle_init_failure(const char* message) {
     ESP_LOGE(TAG, "%s. Restarting system in 5 seconds...", message);
     vTaskDelay(pdMS_TO_TICKS(5000));
@@ -42,7 +41,7 @@ constexpr const char* HTTP_BASE_URL = "http://10.42.0.1";
 extern "C" void app_main(void) {
     ESP_LOGI(TAG, "Initializing Mine Detector application...");
 
-    // 1. Initialize NVS (required for Wi-Fi storage in ESP-IDF)
+    // Initialize NVS (required for Wi-Fi storage in ESP-IDF)
     esp_err_t nvs_ret = nvs_flash_init();
     if (nvs_ret == ESP_ERR_NVS_NO_FREE_PAGES || nvs_ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
         ESP_ERROR_CHECK(nvs_flash_erase());
@@ -50,18 +49,18 @@ extern "C" void app_main(void) {
     }
     ESP_ERROR_CHECK(nvs_ret);
 
-    // 2. Hardware Peripheral Drivers (Static storage ensures driver lifetimes persist)
+    // Hardware Drivers
     static mine_detector::TouchSensor sensor(TOUCH_SENSOR_PIN);
     static mine_detector::GpsNeo gps(GPS_RX_PIN, GPS_TX_PIN);
     static mine_detector::Buzzer buzzer(mine_detector::BuzzerType::ACTIVE, BUZZER_PIN);
 
-    // 3. Wi-Fi Manager (Must be static to avoid destruction on app_main task exit)
+    // Wi-Fi Manager
     static networking::WifiManager wifi(WIFI_SSID, WIFI_PASS);
     if (!wifi.connect()) {
         handle_init_failure("Failed to connect to Wi-Fi AP");
     }
 
-    // 4. Initialize Peripherals
+    // Initialize sensors
     if (!sensor.init()) {
         handle_init_failure("Failed to initialize touch sensor");
     }
@@ -74,7 +73,7 @@ extern "C" void app_main(void) {
         handle_init_failure("Failed to initialize GPS");
     }
 
-    // 5. Network Clients (Wi-Fi is now active)
+    // Http Client
     static auto udp_socket = std::make_unique<networking::UdpSocket>(UDP_IP, UDP_PORT);
     if (!udp_socket->init()) {
         handle_init_failure("Failed to initialize UDP socket");
