@@ -131,6 +131,7 @@ include(GoogleTest)
 # Replace 'tests/flags_test.cpp' with the path to your test source file
 add_executable(flags_test
     test/flags_tests.cpp
+    test/confidence_tests.cpp
 )
 
 target_link_libraries(flags_test PRIVATE 

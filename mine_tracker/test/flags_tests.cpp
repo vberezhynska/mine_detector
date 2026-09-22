@@ -3,7 +3,7 @@
 
 namespace mine_tracker {
 namespace {
-//Test 2: Create a one group from 
+//Test 1: Reject point 0.00, 0.00
 TEST(FlagsTest, RejectCoordinatesThatAreCloseToZeroZeroPoint) {
     constexpr double radius_meters = 50.0;
     Flags tracker(radius_meters);
