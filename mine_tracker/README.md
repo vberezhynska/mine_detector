@@ -195,3 +195,19 @@ curl.exe -i -X POST http://192.168.1.199:8080/v1/api/alerts `
   "gpType": 2
 }
 ```
+
+### 6. Running Unit Tests
+
+Run local flags and confidence tests using CMake:
+
+```bash
+cmake -B build -DCMAKE_BUILD_TYPE=Debug
+cmake --build build
+ctest --test-dir build --output-on-failure
+```
+
+Run test directly
+
+```bash
+./build/flags_test
+```
