@@ -13,6 +13,3 @@ sdkconfig.ci
 
 #logs
 **/logs.*
-
-#test
-**/test/
