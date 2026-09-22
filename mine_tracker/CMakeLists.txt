@@ -75,6 +75,17 @@ if(NOT TARGET mavlink)
 endif()
 # ===== END MavLink Headers =====
 
+# ===== GoogleTest =====
+FetchContent_Declare(
+    googletest
+    GIT_REPOSITORY https://github.com/google/googletest.git
+    GIT_TAG        v1.14.0
+)
+# Prevent GTest from overriding parent project's compiler runtime on Windows
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(googletest)
+# ===== END GoogleTest =====
+
 find_package(Threads REQUIRED)
 
 # ---- Libraries ----
@@ -105,10 +116,28 @@ target_link_libraries(tracker PUBLIC
 
 # ---- Main Executable ----
 add_executable(mine_tracker 
-    src/main.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
 )
 
 # Link tracker library to the executable
 target_link_libraries(mine_tracker PRIVATE tracker)
 
 target_compile_options(mine_tracker PRIVATE -Wno-psabi)
+
+# ---- Tests ----
+enable_testing()
+include(GoogleTest)
+
+# Replace 'tests/flags_test.cpp' with the path to your test source file
+add_executable(flags_test
+    test/flags_tests.cpp
+)
+
+target_link_libraries(flags_test PRIVATE 
+    tracker 
+    GTest::gtest_main
+)
+
+target_compile_options(flags_test PRIVATE -Wno-psabi)
+
+gtest_discover_tests(flags_test)
